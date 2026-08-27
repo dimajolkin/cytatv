@@ -1,0 +1,57 @@
+{
+  "input": "/Users/dimajolkin/Project/Github/cytatv/docs/photos/14-emmc-footprint-closeup.png",
+  "output": "/Users/dimajolkin/Project/Github/cytatv/docs/photos/22-emmc153-isp-opencv.png",
+  "roi": [
+    240,
+    240,
+    640,
+    640
+  ],
+  "pad_count": 53,
+  "lattice": {
+    "A1": [
+      239.4,
+      245.4
+    ],
+    "pitch_xy": [
+      30.69,
+      30.69
+    ],
+    "cells": 35,
+    "hits": 35,
+    "score": 110.4355624693781
+  },
+  "isp": {
+    "DAT0": {
+      "ball": "A3",
+      "x": 300.78,
+      "y": 245.4
+    },
+    "GND": {
+      "ball": "A6",
+      "x": 392.85,
+      "y": 245.4
+    },
+    "VCC": {
+      "ball": "E6",
+      "x": 392.85,
+      "y": 368.16
+    },
+    "VCCQ": {
+      "ball": "M4",
+      "x": 331.47,
+      "y": 582.99
+    },
+    "CMD": {
+      "ball": "M5",
+      "x": 362.16,
+      "y": 582.99
+    },
+    "CLK": {
+      "ball": "M6",
+      "x": 392.85,
+      "y": 582.99
+    }
+  },
+  "orientation": "A1 top-left (silkscreen notch); rows A..P skip I,O; cols 1..14"
+}

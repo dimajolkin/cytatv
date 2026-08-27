@@ -1,0 +1,19 @@
+System startup
+
+
+Relocate Boot
+
+Jump to C code
+
+
+Compressed-boot v1.0.0
+Uncompress........................Ok
+
+
+System startup
+
+
+Relocate Boot
+
+Jump to C code
+Uncompressing Linux... done, booting the kernel.

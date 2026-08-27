@@ -1,0 +1,28 @@
+# Recovery boot log — Q22E Cyta (2026-07-05)
+
+```
+init: property 'ro.serialno' doesn't exist while expanding '${ro.serialno}'
+init: write: cannot expand '${ro.serialno}'
+init: (Loading properties from /system/build.prop took 0.00s.)
+init: (Loading properties from /vendor/build.prop took 0.00s.)
+init: (Loading properties from /factory/factory.prop took 0.00s.)
+init: (Loading properties from /system/etc/build_hw.prop took 0.00s.)
+init: /recovery not specified in fstab
+init: Get content from file cmdline, is :androidboot.selinux=disabled console=ttyAMA0,115200 blkdevparts=mmcblk0:1M(fbl),1M(fbldata),16M(trustedcore),16M(trustedcorebak),2M(fastboot),2M(sblbak),4M(bootargs),30M(recovery),1M(deviceinfo),4M(baseparam),16M(logo),16M(fastplay),8M(misc),24M(factory),15M(kernel),10M(cadata),10M(securestore),2M(sysinfo),8M(appinfo),850M(backup),850M(cache),1200M(system),50M(shatable),200M(vendor),-(userdata) hbcomp=/dev/block/mmcblk0p14 forceFlag mem=1961M mmz=ddr,0,0,64M vmalloc=500M pcb=0x0
+init: ===========loading Q22 props
+init: Starting service 'recovery'...
+EXT4-fs (mmcblk0p21): warning: maximal mount count reached, running e2fsck is recommended
+EXT4-fs (mmcblk0p21): recovery complete
+EXT4-fs (mmcblk0p21): mounted filesystem with ordered data mode. Opts:
+EXT4-fs (mmcblk0p22): mounted filesystem with ordered data mode. Opts:
+```
+
+## blkdevparts (raw)
+
+```
+mmcblk0:1M(fbl),1M(fbldata),16M(trustedcore),16M(trustedcorebak),2M(fastboot),2M(sblbak),4M(bootargs),30M(recovery),1M(deviceinfo),4M(baseparam),16M(logo),16M(fastplay),8M(misc),24M(factory),15M(kernel),10M(cadata),10M(securestore),2M(sysinfo),8M(appinfo),850M(backup),850M(cache),1200M(system),50M(shatable),200M(vendor),-(userdata)
+```
+
+## RAM
+
+`mem=1961M` → **2 GB**

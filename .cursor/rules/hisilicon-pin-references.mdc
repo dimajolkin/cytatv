@@ -1,0 +1,13 @@
+---
+description: Справочники по пинам Hi3798CV200 для Cyta STB
+alwaysApply: true
+---
+
+# Hi3798CV200 — справочники по пинам
+
+При вопросах о pinout SoC, mux, UART, питании и hardware design используй:
+
+1. https://bbs.16rd.com/thread-452360-1-1.html — DataSheet, DC-DC guide, PDF по Hi3798CV200
+2. https://cloud.tencent.com/developer/article/2040812 — обзор Hi3798C V200 hardware design (433-pin TFBGA, mux registers, crystal 24 MHz)
+
+Локальная документация: `docs/hardware.md`, `docs/uart.md`.

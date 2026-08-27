@@ -1,0 +1,29 @@
+# Network probe — 2026-07-05T19:44:22Z
+Target: 192.168.2.119
+
+## Ping
+PING 192.168.2.119 (192.168.2.119): 56 data bytes
+Request timeout for icmp_seq 0
+Request timeout for icmp_seq 1
+
+--- 192.168.2.119 ping statistics ---
+3 packets transmitted, 0 packets received, 100.0% packet loss
+ping failed
+
+## Open ports (common STB)
+  closed: 23
+  closed: 24
+  closed: 5555
+  closed: 8080
+  closed: 8443
+  closed: 9008
+
+## ADB
+failed to connect to '192.168.2.119:5555': Operation timed out
+adb: device '192.168.2.119:5555' not found
+adb shell failed
+adb: device '192.168.2.119:5555' not found
+error: no such device '192.168.2.119:5555'
+
+## Telnet (port 23)
+Port 23 closed

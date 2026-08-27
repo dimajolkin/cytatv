@@ -1,0 +1,54 @@
+---
+description: Как прошивать custom Android на eMMC Q22E (ISP Socket)
+alwaysApply: true
+---
+
+# Прошивка custom Android → eMMC
+
+Единственный рабочий путь на этой Cyta: **ISP через USB-сокет eMMC153** (не HiTool, не recovery OTA).
+
+## Команда (запоминай)
+
+Из **Terminal.app** (нужен Full Disk Access + sudo). Из Cursor/osascript raw `/dev/rdisk*` часто даёт `Operation not permitted`.
+
+```bash
+# 1) Сборка образов
+cd ~/Project/Github/cytatv
+./scripts/build-custom-android.sh
+
+# 2) Worker
+cd ~/Project/Github/eMMC153-Writer
+go build -o eMMC153-Worker ./cmd/worker
+
+# 3) diskutil list → Socket ~7.8 GB → rdiskN (сейчас часто disk11 → /dev/rdisk11)
+diskutil list
+
+# 4) Прошивка
+sudo ./eMMC153-Worker batch \
+  --device /dev/rdiskN \
+  --android ~/Project/Github/cytatv/firmware/custom \
+  --verify
+```
+
+Или обёртка в cytatv:
+
+```bash
+YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
+```
+
+## Что пишет batch
+
+| Раздел | Offset | Файл |
+|--------|--------|------|
+| logo | 77 MiB | `logo.img` |
+| kernel | 141 MiB | `kernel.img` |
+| system | 1886 MiB | `system.img` |
+| userdata wipe | 3336 MiB | 64 MiB zeros (обязательно) |
+
+Не трогать `fbl` / `fastboot` / `trustedcore` без бэкапа.
+
+## После
+
+Чип в плату → 12V → UART `./scripts/uart-capture.sh` → сеть/ADB/SSH.
+
+Доки: `docs/flash.md`, `docs/emmc-isp.md`. Откат: образы из `firmware/cyta/extracted/partitions/`.

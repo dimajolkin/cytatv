@@ -1,0 +1,57 @@
+{
+  "input": "../../docs/photos/14-emmc-footprint-closeup.png",
+  "output": "../../docs/photos/22-emmc153-isp-go.png",
+  "roi": [
+    240,
+    240,
+    640,
+    640
+  ],
+  "pad_count": 83,
+  "lattice": {
+    "A1": [
+      259.47115384615387,
+      271.25
+    ],
+    "cells": 83,
+    "hits": 83,
+    "pitch_xy": [
+      28.846153846153847,
+      28.846153846153847
+    ],
+    "score": 9579.749516884007
+  },
+  "isp": {
+    "CLK": {
+      "ball": "M6",
+      "x": 403.7,
+      "y": 588.56
+    },
+    "CMD": {
+      "ball": "M5",
+      "x": 374.86,
+      "y": 588.56
+    },
+    "DAT0": {
+      "ball": "A3",
+      "x": 317.16,
+      "y": 271.25
+    },
+    "GND": {
+      "ball": "A6",
+      "x": 403.7,
+      "y": 271.25
+    },
+    "VCC": {
+      "ball": "E6",
+      "x": 403.7,
+      "y": 386.63
+    },
+    "VCCQ": {
+      "ball": "M4",
+      "x": 346.01,
+      "y": 588.56
+    }
+  },
+  "orientation": "A1 top-left (silkscreen notch); rows A..P skip I,O; cols 1..14"
+}
