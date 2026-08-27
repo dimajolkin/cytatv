@@ -3,6 +3,7 @@
 | Скрипт | |
 |--------|--|
 | `build-custom-android.sh` | custom `system.img` (Lawnchair, root, apps) |
+| `build-wifihub.sh` | APK «Wi‑Fi» → `assets/extras/WifiHub.apk` |
 | `flash-custom-emmc.sh` | ISP Socket → Worker batch (нужен sudo / Terminal) |
 | `build-e2d.sh` | пакет `firmware/e2d/` |
 | `download-e2d.sh` | скачать исходники e2d в `firmware/flash/` |

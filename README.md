@@ -10,7 +10,7 @@ TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, cu
 | UART | ✅ boot log @ 115200, **только чтение** |
 | Прошивка | ✅ **ISP eMMC** ([docs/flash.md](docs/flash.md)) |
 | Backup | ✅ `firmware/cyta/` |
-| Custom Android | Lawnchair, root, SSH, Amaze, TermOnePlus |
+| Custom Android | Lawnchair, root, SSH, Amaze, TermOnePlus, Lightning |
 | Linux e2d | `firmware/e2d/` после custom |
 
 ## Быстрый путь

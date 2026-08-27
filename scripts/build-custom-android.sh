@@ -18,7 +18,7 @@ FSCK="${E2FS}/e2fsck"
 [[ -f "$ASSETS/magisk-arm/magisk" ]] || { echo "нет $ASSETS/magisk-arm/* — извлеки из Magisk.apk"; exit 1; }
 [[ -f "$ASSETS/dropbear-arm/dropbear" ]] || { echo "нет $ASSETS/dropbear-arm/dropbear"; exit 1; }
 [[ -f "$ASSETS/ssh/authorized_keys" ]] || { echo "нет $ASSETS/ssh/authorized_keys"; exit 1; }
-for _apk in TermOnePlus WifiAnalyzer Game2048 Amaze; do
+for _apk in TermOnePlus WifiAnalyzer Game2048 Amaze Lightning WifiHub; do
   [[ -f "$ASSETS/extras/${_apk}.apk" ]] || { echo "нет $ASSETS/extras/${_apk}.apk"; exit 1; }
 done
 
@@ -407,16 +407,20 @@ echo "=== Lawnchair + Magisk (priv-app) + su + dropbear ==="
 write_back "$ASSETS/Lawnchair.apk" /priv-app/Lawnchair/Lawnchair.apk 0100644
 write_back "$ASSETS/Magisk.apk" /priv-app/Magisk/Magisk.apk 0100644
 
-# UI extras: терминал, сеть, файлы, игра
-echo "=== extras (TermOnePlus / WifiAnalyzer / Amaze / 2048) ==="
+# UI extras: терминал, сеть, файлы, игра, браузер, Wi‑Fi хаб
+echo "=== extras (TermOnePlus / WifiAnalyzer / Amaze / 2048 / Lightning / WifiHub) ==="
 "$DEBUGFS" -w -R "mkdir /app/TermOnePlus" "$IMG" 2>/dev/null || true
 "$DEBUGFS" -w -R "mkdir /app/WifiAnalyzer" "$IMG" 2>/dev/null || true
 "$DEBUGFS" -w -R "mkdir /app/Amaze" "$IMG" 2>/dev/null || true
 "$DEBUGFS" -w -R "mkdir /app/Game2048" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "mkdir /app/Lightning" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "mkdir /app/WifiHub" "$IMG" 2>/dev/null || true
 write_back "$ASSETS/extras/TermOnePlus.apk" /app/TermOnePlus/TermOnePlus.apk 0100644
 write_back "$ASSETS/extras/WifiAnalyzer.apk" /app/WifiAnalyzer/WifiAnalyzer.apk 0100644
 write_back "$ASSETS/extras/Amaze.apk" /app/Amaze/Amaze.apk 0100644
 write_back "$ASSETS/extras/Game2048.apk" /app/Game2048/Game2048.apk 0100644
+write_back "$ASSETS/extras/Lightning.apk" /app/Lightning/Lightning.apk 0100644
+write_back "$ASSETS/extras/WifiHub.apk" /app/WifiHub/WifiHub.apk 0100644
 
 write_back "$ASSETS/magisk-arm/magisk" /xbin/magisk 0100755
 write_back "$ASSETS/magisk-arm/magisk" /xbin/su 0100755
@@ -446,6 +450,8 @@ echo "=== priv-app (launcher/root) ==="
 "$DEBUGFS" -R 'ls /app/WifiAnalyzer' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/Amaze' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/Game2048' "$IMG" 2>/dev/null || true
+"$DEBUGFS" -R 'ls /app/Lightning' "$IMG" 2>/dev/null || true
+"$DEBUGFS" -R 'ls /app/WifiHub' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /xbin' "$IMG" 2>/dev/null | tr -s ' ' '\n' | grep -E 'magisk|su|busybox|dropbear|uart' || true
 "$DEBUGFS" -R 'ls /etc/dropbear' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /etc/init' "$IMG" 2>/dev/null | tr -s ' ' '\n' | grep custom || true
@@ -460,7 +466,7 @@ logo   $(wc -c <"$OUT/logo.img")
 kernel $(wc -c <"$OUT/kernel.img")
 system $(wc -c <"$OUT/system.img")
 launcher: ch.deletescape.lawnchair
-apps: TermOnePlus (terminal), WifiAnalyzer, Amaze (files), 2048
+apps: TermOnePlus, WifiAnalyzer, Amaze, 2048, Lightning, WifiHub (Wi‑Fi)
 root: /system/xbin/su (Magisk, ADVCA kernel — без boot-patch)
 ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e (или root с пустым паролем)
   ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>
