@@ -17,7 +17,7 @@
 | **Прошивка** | **[flash.md](flash.md)** |
 | ISP пины / оффсеты | [emmc-isp.md](emmc-isp.md) |
 | Linux e2d | [linux-install.md](linux-install.md) |
-| ADVCA / boot-эксперименты | [boot-experiments.md](boot-experiments.md), [advca-imghead.md](advca-imghead.md) |
+| ADVCA / boot-эксперименты | [experiments/advca-boot/](../experiments/advca-boot/) |
 | Recovery | [recovery.md](recovery.md) |
 | macOS | [macos-setup.md](macos-setup.md) |
 | Фото | [photos/README.md](photos/README.md) |

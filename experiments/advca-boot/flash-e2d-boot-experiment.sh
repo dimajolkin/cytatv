@@ -2,7 +2,7 @@
 # ISP: эксперимент e2d multiboot (path B). Terminal.app + sudo.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BOOT="$ROOT/firmware/e2d/boot-experiment"
 CYTA="$ROOT/firmware/cyta/extracted/partitions"
 WRITER_DIR="${EMMC_WRITER_DIR:-$ROOT/../eMMC153-Writer}"
@@ -54,7 +54,7 @@ need_cyta() {
 }
 
 need_boot() {
-  [[ -d "$BOOT" ]] || die "нет $BOOT — ./scripts/build-e2d-boot-experiment.sh"
+  [[ -d "$BOOT" ]] || die "нет $BOOT — ./build-e2d-boot-experiment.sh"
   for f in fastboot.img baseparam.img kernel.img; do
     [[ -f "$BOOT/$f" ]] || die "нет $BOOT/$f"
   done

@@ -43,6 +43,7 @@ YES=1 DISK=diskM sudo -E ./scripts/prepare-sdcard.sh firmware/e2d/sd/e2d-armhf-p
 | [docs/uart.md](docs/uart.md) | UART |
 | [docs/macos-setup.md](docs/macos-setup.md) | brew / порты |
 | [docs/README.md](docs/README.md) | индекс |
+| [experiments/advca-boot/](experiments/advca-boot/) | ISP/ADVCA boot-эксперименты |
 
 ## Структура
 
@@ -52,6 +53,7 @@ firmware/custom/     # custom Android (сборка)
 firmware/e2d/        # Debian e2d (сборка)
 firmware/flash/      # исходники e2d
 scripts/             # macOS-скрипты
+experiments/         # ISP/boot lab (не основной flash-путь)
 docs/
 ```
 

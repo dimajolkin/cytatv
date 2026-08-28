@@ -3,7 +3,7 @@
 # RSA/meta не трогаем — smoke проверяет, покрывает ли подпись env.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="$ROOT/firmware/cyta/extracted/partitions/bootargs.img"
 OUT_DIR="$ROOT/firmware/e2d/boot-experiment"
 mkdir -p "$OUT_DIR"
@@ -73,7 +73,7 @@ print(
 
 Flash:
   YES=1 DISK=diskN BOOTARGS=hybrid-smoke STAGE=bootargs-only \\
-    sudo -E ./scripts/flash-e2d-boot-experiment.sh
+    sudo -E ./flash-e2d-boot-experiment.sh
 """
 )
 PY

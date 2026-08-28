@@ -3,7 +3,7 @@
 # .upk переписывает boot-цепочку — на Cyta ADVCA может не загрузиться. Бэкап: firmware/cyta/.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 FLASH="$ROOT/firmware/flash"
 OUT="$ROOT/firmware/e2d/boot-experiment"
 UPK="${UPK:-$FLASH/e2d-armhf-pixel-20210226_K3.18.24.upk}"
@@ -164,9 +164,9 @@ ISP offsets (Q22E):
   baseparam  @ 73 MiB
   kernel     @ 141 MiB
 
-Откат: ./scripts/flash-e2d-boot-experiment.sh rollback
+Откат: ./flash-e2d-boot-experiment.sh rollback
 
-Прошивка: STAGE=1|2|3|full YES=1 DISK=diskN sudo -E ./scripts/flash-e2d-boot-experiment.sh
+Прошивка: STAGE=1|2|3|full YES=1 DISK=diskN sudo -E ./flash-e2d-boot-experiment.sh
 EOF
 
 echo ""

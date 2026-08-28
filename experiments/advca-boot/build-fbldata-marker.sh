@@ -3,7 +3,7 @@
 # Ищем после boot: androidboot.fbldata=smoke1 в /proc/cmdline (UART или adb).
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="$ROOT/firmware/cyta/extracted/partitions/fbldata.img"
 OUT_DIR="$ROOT/firmware/e2d/boot-experiment"
 OUT="$OUT_DIR/fbldata-cmdline-marker.img"
