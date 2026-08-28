@@ -1,6 +1,7 @@
 # Прошивка Q22E — актуальный путь
 
-Для этой Cyta: UART read-only, ADB в UI нет → **только ISP eMMC**.
+Для этой Cyta: UART read-only на стоке → **только ISP eMMC**.  
+Verified boot (ADVCA) не ломаем: родные `bootargs` / `kernel`.
 
 ```
 firmware/cyta/ (бэкап ✅)
@@ -9,12 +10,12 @@ firmware/cyta/ (бэкап ✅)
   ISP: firmware/custom (logo + kernel + system)
         │
         ▼
-  Generic Android (без Cyta IPTV)
+  Custom Android + Magisk system-root + SSH/ADB
         │
-        ├── стоп: «чистый» Android
+        ├── без SD: «чистый» Android
         │
         ▼
-  firmware/flash/*.upk → MENU → SD e2d → синяя кнопка = Linux
+  microSD e2d вставлена → init: cytatv-sd-linux.sh → chroot Debian
 ```
 
 ## 1. Бэкап
@@ -31,11 +32,17 @@ firmware/cyta/ (бэкап ✅)
 |------|------|
 | `logo.img` | 77M / 16M |
 | `kernel.img` | 141M / 15M |
-| `system.img` | 1886M / 1200M (живой ext4, debloat + ADB) |
+| `system.img` | 1886M / 1200M (живой ext4, debloat + root + SD Linux) |
 
 ```bash
 ./scripts/build-custom-android.sh
 
+YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
+```
+
+Или вручную:
+
+```bash
 cd ../eMMC153-Writer && go build -o eMMC153-Worker ./cmd/worker
 sudo ./eMMC153-Worker batch \
   --device /dev/rdiskN \
@@ -45,12 +52,27 @@ sudo ./eMMC153-Worker batch \
 
 `rdiskN` = Socket ~7.8 GB (`diskutil list`). Только **Terminal.app + sudo**.
 
-Откат к стоку: `firmware/cyta/`.
+Откат к стоку: `firmware/cyta/`.  
+**Обязательно** wipe **userdata** в batch (старый HOME / Cyta).
 
-## 3. Linux (опционально)
+## 3. Linux с microSD
 
-Сборка: **`firmware/e2d/`** ← `./scripts/build-e2d.sh` (исходники в `firmware/flash/`).  
-После custom Android: [linux-install.md](linux-install.md).
+Образ уже на SD — см. [linux-install.md](linux-install.md).  
+После boot Android init сам монтирует e2d и поднимает chroot (если SD на месте).
+
+Отключить автозапуск: `setprop persist.cytatv.sdlinux 0`.
+
+## Чеклист после прошивки
+
+1. SD с e2d вставлена (если нужен Linux).
+2. Чип в плату → 12V.
+3. UART: `./scripts/uart-capture.sh`
+   - `cytatv init.bigfish.sh` / hooks
+   - при SD: `cytatv: sd-linux started`
+4. Сеть → SSH: `ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>`
+5. `su -c id` → `uid=0`
+6. ADB: `adb connect <IP>:5555`
+7. Ручной повтор: `/system/xbin/cytatv-sd-linux.sh`
 
 ## Что не работает на этой приставке
 
@@ -58,4 +80,6 @@ sudo ./eMMC153-Worker batch \
 |-------|--------|
 | HiTool / burn по UART | RX на плате не принимает ввод |
 | Recovery «Apply update» | только подписанный Cyta `update.zip` |
+| e2d `.upk` / MENU / синяя кнопка | ADVCA; без OEM private key — [experiments/advca-boot/](../experiments/advca-boot/) |
+| Правка `bootargs` / hybrid env | RSA → boot loop |
 | ADB на стоковой Cyta | debugging вырезан (на custom — tcp 5555) |

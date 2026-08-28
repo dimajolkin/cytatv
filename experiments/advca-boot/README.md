@@ -122,9 +122,8 @@
 
 Verified boot **не ломаем**. Linux:
 
-1. Custom Android (уже) + microSD e2d (образ проверен SHA-256).
-2. Из userspace: kexec (если появится в kernel) / chroot / скрипт на SD.
-3. Не прошивать unsigned `bootargs` / e2d env на production-чип без отката ISP.
+1. Custom Android + microSD e2d → **`cytatv-sd-linux.sh`** (автозапуск chroot) — [linux-install.md](../../docs/linux-install.md).
+2. Не прошивать unsigned `bootargs` / e2d env на production-чип без отката ISP.
 
 Откат boot-цепочки:
 

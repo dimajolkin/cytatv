@@ -54,13 +54,30 @@ Pad 3–4 (с трасами) — почти наверняка TX/RX.
 
 | Этап | Содержимое |
 |------|------------|
-| U-Boot / kernel | как раньше (`console=ttyAMA0,115200`) |
+| Bootloader | `Compressed-boot`, `Uncompressing Linux...` |
+| Kernel / init | `/proc/kmsg` → ttyAMA0 (после `init.bigfish.sh`) |
 | Android | **logcat** `-b all` → тот же UART |
+
+На **normal boot** loader часто обрывается на `booting the kernel` — это нормально для Q22E; дальше лог идёт только когда Android доходит до `init.bigfish.sh` (обычно +30–60 с).
+
+Хук: `init.bigfish.sh` + `logd.rc` (Android 7 не всегда читает `custom_uart.rc`).
 
 Уровень: `persist.cytatv.uart.loglevel` (по умолчанию **`V`** — всё).  
 Тише: `I` или `D` (через `adb shell setprop …` после сети, либо пересборка).
 
-RX по-прежнему не работает — это только вывод, не shell.
+RX по-прежнему может не работать на железе Q22E. В прошивке включён эксперимент **`uart-shell.sh`**: читает команды с `/dev/ttyAMA0`, выполняет через `sh -c`, ответ → UART.
+
+```
+help          — список
+id            — whoami
+getprop ro.build.display.id
+reboot
+exit          — выйти из shell-цикла
+```
+
+Отключить: `setprop persist.cytatv.uart.shell 0` (после ADB) или пересборка с `0` в build.prop.
+
+В **picocom** можно печатать команды — если RX жив, увидишь `#` prompt и вывод.
 
 ## Известная проблема Q22
 

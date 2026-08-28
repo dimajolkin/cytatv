@@ -1,0 +1,68 @@
+=== Sat Aug 29 00:40:04 EEST 2026 ===
+/dev/disk11 (internal, physical):
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:     FDisk_partition_scheme                        *31.3 GB    disk11
+   1:                      Linux                         4.0 GB     disk11s1
+                    (free space)                         27.3 GB    -
+
+dumpe2fs 1.47.4 (6-Mar-2025)
+Journal superblock magic number invalid!
+Filesystem volume name:   <none>
+Last mounted on:          /opt/img
+Filesystem UUID:          fed85e3a-a2f9-4359-aeed-638afa6003a9
+Filesystem magic number:  0xEF53
+Filesystem revision #:    1 (dynamic)
+Filesystem features:      has_journal ext_attr resize_inode dir_index filetype needs_recovery extent 64bit flex_bg sparse_super large_file huge_file dir_nlink extra_isize metadata_csum
+Filesystem flags:         signed_directory_hash 
+Default mount options:    user_xattr acl
+Filesystem state:         clean
+Errors behavior:          Continue
+Filesystem OS type:       Linux
+Inode count:              243360
+Block count:              972544
+Reserved block count:     48627
+Free blocks:              58212
+Free inodes:              125498
+First block:              0
+Block size:               4096
+Fragment size:            4096
+Group descriptor size:    64
+Reserved GDT blocks:      474
+Blocks per group:         32768
+Fragments per group:      32768
+Inodes per group:         8112
+Inode blocks per group:   507
+Flex block group size:    16
+Filesystem created:       Thu Jul  2 03:22:11 2020
+Last mount time:          Fri Feb 26 21:06:59 2021
+Last write time:          Fri Feb 26 21:06:59 2021
+Mount count:              3
+Maximum mount count:      -1
+Last checked:             Thu Jul  2 03:22:11 2020
+Check interval:           0 (<none>)
+Lifetime writes:          3671 MB
+Reserved blocks uid:      0 (user root)
+Reserved blocks gid:      0 (group wheel)
+First inode:              11
+Inode size:               256
+Required extra isize:     32
+Desired extra isize:      32
+Journal inode:            8
+Default directory hash:   half_md4
+Directory Hash Seed:      7d4403f0-9878-4d64-844e-554c29a5249f
+Journal backup:           inode blocks
+Checksum type:            crc32c
+Checksum:                 0x13f4b845
+
+SHA4k_card:
+5dfd944416d3f99101c2af4b2e5521b6c7237ca424c2b6285c8019d63794dc89  -
+SHA4k_img_at_1M:
+5dfd944416d3f99101c2af4b2e5521b6c7237ca424c2b6285c8019d63794dc89  -
+
+debugfs 1.47.4 (6-Mar-2025)
+/dev/rdisk11s1: Block bitmap checksum does not match bitmap while reading allocation bitmaps
+ls: Filesystem not open
+--- debian_version ---
+debugfs 1.47.4 (6-Mar-2025)
+/dev/rdisk11s1: Block bitmap checksum does not match bitmap while reading allocation bitmaps
+cat: Filesystem not open
