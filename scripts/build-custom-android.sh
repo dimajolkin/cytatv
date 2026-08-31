@@ -15,6 +15,7 @@ FSCK="${E2FS}/e2fsck"
 [[ -f "$CYTA_PART/system.img" ]] || { echo "нет system.img дампа"; exit 1; }
 [[ -f "$ASSETS/OpenLauncher.apk" ]] || { echo "нет $ASSETS/OpenLauncher.apk"; exit 1; }
 [[ -f "$ASSETS/Magisk.apk" ]] || { echo "нет $ASSETS/Magisk.apk"; exit 1; }
+[[ -f "$ASSETS/Settings.apk" ]] || { echo "нет $ASSETS/Settings.apk — собери: (cd ../q22e-android/settings-ui && make apk-for-firmware)"; exit 1; }
 [[ -f "$ASSETS/magisk-arm/magisk" ]] || { echo "нет $ASSETS/magisk-arm/* — извлеки из Magisk.apk"; exit 1; }
 [[ -f "$ASSETS/dropbear-arm/dropbear" ]] || { echo "нет $ASSETS/dropbear-arm/dropbear"; exit 1; }
 [[ -f "$ASSETS/ssh/authorized_keys" ]] || { echo "нет $ASSETS/ssh/authorized_keys"; exit 1; }
@@ -72,7 +73,7 @@ KEEP_APP = {
     "LatinIME",
     "PacProcessor",
     "PrintSpooler",
-    "Settings",
+    # Settings UI — не KEEP: сток сносим, кладём наш в /priv-app/Settings
     "UserDictionaryProvider",
     "WallpaperBackup",
     "webview",
@@ -604,6 +605,27 @@ echo "=== cytatv-boot.sh ===" >>"$T" 2>/dev/null
 
 echo 0 > /sys/fs/selinux/enforce 2>/dev/null
 
+# --- root check (Magisk /system/xbin/su) ---
+(
+  sleep 8
+  echo "=== cytatv root-check ===" >>"$T" 2>/dev/null
+  SU=/system/xbin/su
+  [ -x "$SU" ] || SU=/system/bin/su
+  if [ ! -x "$SU" ] && [ ! -x /system/xbin/magisk ]; then
+    echo "cytatv: root FAIL (no su/magisk)" >>"$T" 2>/dev/null
+    exit 0
+  fi
+  [ -x /system/xbin/magisk ] && /system/xbin/magisk --daemon >/dev/null 2>&1
+  ID0=$("$SU" 0 -c id 2>/dev/null)
+  ID1=$("$SU" 1000 -c id 2>/dev/null)
+  echo "cytatv: su0=$ID0" >>"$T" 2>/dev/null
+  echo "cytatv: su1000=$ID1" >>"$T" 2>/dev/null
+  echo "$ID0" | grep -q 'uid=0' && echo "cytatv: root OK (uid 0)" >>"$T" 2>/dev/null \
+    || echo "cytatv: root FAIL (su 0)" >>"$T" 2>/dev/null
+  echo "$ID1" | grep -q 'uid=1000' && echo "cytatv: system OK (uid 1000)" >>"$T" 2>/dev/null \
+    || echo "cytatv: system FAIL (su 1000)" >>"$T" 2>/dev/null
+) &
+
 [ -x /system/xbin/uart-logcat.sh ] && /system/xbin/uart-logcat.sh &
 [ -x /system/xbin/uart-shell.sh ] && /system/xbin/uart-shell.sh &
 
@@ -644,6 +666,33 @@ echo 0 > /sys/fs/selinux/enforce 2>/dev/null
     sleep 2
   done
   sleep 3
+  # Settings (com.android.settings): runtime + privileged perms без диалогов
+  PKG=com.android.settings
+  for P in \
+    android.permission.ACCESS_FINE_LOCATION \
+    android.permission.ACCESS_COARSE_LOCATION \
+    android.permission.WRITE_SECURE_SETTINGS \
+    android.permission.WRITE_SETTINGS \
+    android.permission.CHANGE_WIFI_STATE \
+    android.permission.ACCESS_WIFI_STATE \
+    android.permission.ACCESS_NETWORK_STATE \
+    android.permission.INTERNET
+  do
+    pm grant "$PKG" "$P" >/dev/null 2>&1
+  done
+  echo "cytatv: pm grant $PKG done" >>"$T" 2>/dev/null
+  # Magisk: auto-allow su для Settings (policy=2 ALLOW)
+  SU=/system/xbin/su
+  [ -x "$SU" ] || SU=/system/bin/su
+  if [ -x /system/xbin/magisk ] || [ -x "$SU" ]; then
+    UID_S=$(dumpsys package "$PKG" 2>/dev/null | grep -m1 'userId=' | sed 's/.*userId=\([0-9]*\).*/\1/')
+    if [ -n "$UID_S" ]; then
+      /system/xbin/magisk --sqlite \
+        "REPLACE INTO policies (uid,policy,until,logging,notification) VALUES($UID_S,2,0,1,0)" \
+        >/dev/null 2>&1
+      echo "cytatv: magisk allow uid=$UID_S ($PKG)" >>"$T" 2>/dev/null
+    fi
+  fi
   [ -x /system/xbin/cytatv-sd-linux.sh ] && /system/xbin/cytatv-sd-linux.sh
 ) &
 SH
@@ -805,6 +854,22 @@ echo "=== OpenLauncher + Magisk (priv-app) + su + dropbear ==="
 write_back "$ASSETS/OpenLauncher.apk" /priv-app/OpenLauncher/OpenLauncher.apk 0100644
 write_back "$ASSETS/Magisk.apk" /priv-app/Magisk/Magisk.apk 0100644
 
+# Наш Settings UI → только /priv-app/Settings (сток /app/Settings уже снят в strip)
+echo "=== install /priv-app/Settings (Q22E, stock removed) ==="
+"$DEBUGFS" -w -R "rm /priv-app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "rmdir /priv-app/Settings" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "mkdir /priv-app/Settings" "$IMG" 2>/dev/null || true
+# на всякий случай добить остатки стока
+"$DEBUGFS" -w -R "rm /app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
+for _o in arm arm64; do
+  "$DEBUGFS" -w -R "rm /app/Settings/oat/$_o/Settings.odex" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "rm /app/Settings/oat/$_o/Settings.vdex" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "rmdir /app/Settings/oat/$_o" "$IMG" 2>/dev/null || true
+done
+"$DEBUGFS" -w -R "rmdir /app/Settings/oat" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "rmdir /app/Settings" "$IMG" 2>/dev/null || true
+write_back "$ASSETS/Settings.apk" /priv-app/Settings/Settings.apk 0100644
+
 # UI extras: терминал, сеть, файлы, игра, браузер, Wi‑Fi хаб
 echo "=== extras (TermOnePlus / WifiAnalyzer / Amaze / 2048 / Lightning / WifiHub) ==="
 "$DEBUGFS" -w -R "mkdir /app/TermOnePlus" "$IMG" 2>/dev/null || true
@@ -830,6 +895,11 @@ write_back "$ASSETS/magisk-arm/magisk" /bin/su 0100755
 
 "$DEBUGFS" -w -R "mkdir /etc/dropbear" "$IMG" 2>/dev/null || true
 write_back "$ASSETS/ssh/authorized_keys" /etc/dropbear/authorized_keys 0100600
+# Android 7 linker: clear DT_FLAGS_1 (DF_1_PIE|NOW) on NDK-built dropbear
+python3 "$ROOT/scripts/elf-clear-dt-flags1.py" \
+  "$ASSETS/dropbear-arm/dropbear" \
+  "$ASSETS/dropbear-arm/dropbearkey" \
+  "$ASSETS/dropbear-arm/scp" || true
 write_back "$ASSETS/dropbear-arm/dropbear" /xbin/dropbear 0100755
 write_back "$ASSETS/dropbear-arm/dropbearkey" /xbin/dropbearkey 0100755
 write_back "$ASSETS/dropbear-arm/scp" /xbin/scp 0100755
@@ -844,6 +914,7 @@ echo "=== remaining /app ==="
 echo "=== priv-app (launcher/root) ==="
 "$DEBUGFS" -R 'ls /priv-app/OpenLauncher' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /priv-app/Magisk' "$IMG" 2>/dev/null || true
+"$DEBUGFS" -R 'ls /priv-app/Settings' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/TermOnePlus' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/WifiAnalyzer' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/Amaze' "$IMG" 2>/dev/null || true
@@ -864,6 +935,7 @@ logo   $(wc -c <"$OUT/logo.img")
 kernel $(wc -c <"$OUT/kernel.img")
 system $(wc -c <"$OUT/system.img")
 launcher: com.benny.openlauncher (OpenLauncher 0.7.4)
+settings: /priv-app/Settings ← q22e-android/settings-ui; Magisk su 0 / su 1000
 apps: TermOnePlus, WifiAnalyzer, Amaze, 2048, Lightning, WifiHub (Wi‑Fi)
 root: /system/xbin/su (Magisk, ADVCA kernel — без boot-patch)
 ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e (или root с пустым паролем)
