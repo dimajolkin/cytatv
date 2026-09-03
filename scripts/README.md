@@ -7,7 +7,7 @@
 | `flash-custom-emmc.sh` | ISP Socket → Worker batch (нужен sudo / Terminal) |
 | `build-e2d.sh` | пакет `firmware/e2d/` |
 | `download-e2d.sh` | скачать исходники e2d в `firmware/flash/` |
-| `prepare-sdcard.sh` | dd e2d на microSD |
+| `prepare-sdcard.sh` | dd e2d-android-chroot на SD/USB |
 | `repack-e2d-for-android.sh` | e2d → ext4 без 64bit (chroot с Android) |
 | `prepare-e2d-usb.sh` | `.upk` на FAT USB (MENU) |
 | ADVCA/e2d boot-эксперименты | → [experiments/advca-boot/](../experiments/advca-boot/) |

@@ -213,6 +213,9 @@ for k, v in [
     ("ro.build.display.id", "Q22E-custom debloat"),
     # fingerprint без LCYT03/cyta в отображаемой части — оставляем валидный формат
     ("ro.build.version.incremental", "custom-1"),
+    # Device Info: Memory/Flash (GetInfoUtil + ro.total.flash fallback)
+    ("ro.total.memsize", "2097152"),
+    ("ro.total.flash", "8G"),
 ]:
     bp = set_prop(bp, k, v)
 
@@ -692,7 +695,7 @@ SH
 
 cat > "$WORKDIR/cytatv-sd-linux.sh" <<'SH'
 #!/system/bin/sh
-# Mount e2d rootfs from microSD and start Debian in chroot (Android kernel).
+# Mount e2d rootfs (microSD or USB) → Debian chroot as root: SSH :22 + Enigma2 UI.
 T=/dev/ttyAMA0
 [ -c "$T" ] || T=/dev/console
 log() { echo "cytatv: sd-linux $*" >>"$T" 2>/dev/null; }
@@ -710,68 +713,81 @@ if [ -f "$LOCK" ]; then
 fi
 echo $$ >"$LOCK"
 
-find_part() {
+# Try mount candidate; echo path only if /etc/debian_version appears.
+try_debian() {
+  cand="$1"
+  kind="$2"
+  [ -b "$cand" ] || return 1
+  mkdir -p "$MNT"
+  if grep -q " $MNT " /proc/mounts 2>/dev/null; then
+    [ -f "$MNT/etc/debian_version" ] || { umount "$MNT" 2>/dev/null || true; return 1; }
+    echo "$cand $kind"
+    return 0
+  fi
+  if mount -t ext4 -o rw,noatime "$cand" "$MNT" 2>/dev/null \
+    || mount -o rw,noatime "$cand" "$MNT" 2>/dev/null; then
+    if [ -f "$MNT/etc/debian_version" ]; then
+      echo "$cand $kind"
+      return 0
+    fi
+    umount "$MNT" 2>/dev/null || true
+  fi
+  return 1
+}
+
+find_debian() {
   for c in \
-    /dev/block/mmcblk1p1 \
-    /dev/block/mmcblk1 \
-    /dev/mmcblk1p1 \
-    /dev/mmcblk1 \
-    /dev/block/vold/public:179,1 \
-    /dev/block/vold/179:1
+    /dev/block/mmcblk1p1 /dev/block/mmcblk1 \
+    /dev/mmcblk1p1 /dev/mmcblk1 \
+    /dev/block/vold/public:179,1 /dev/block/vold/179:1
   do
-    [ -b "$c" ] && { echo "$c"; return 0; }
+    try_debian "$c" sd && return 0
   done
-  # Android often has by-name / platform paths
-  for c in /dev/block/platform/*/by-name/* /dev/block/*; do
+  for c in \
+    /dev/block/sda1 /dev/block/sda /dev/sda1 /dev/sda \
+    /dev/block/sdb1 /dev/block/sdb /dev/sdb1 /dev/sdb
+  do
+    try_debian "$c" usb && return 0
+  done
+  for c in /dev/block/platform/*/by-name/* /dev/block/sd[a-z] /dev/block/sd[a-z][0-9] \
+           /dev/block/mmcblk1 /dev/block/mmcblk1p1; do
     case "$c" in
-      *mmcblk1p1|*mmcblk1) [ -b "$c" ] && { echo "$c"; return 0; } ;;
+      *mmcblk1*) try_debian "$c" sd && return 0 ;;
+      *sd[a-z]*) try_debian "$c" usb && return 0 ;;
     esac
   done
   return 1
 }
 
-PART=""
+FOUND=""
 i=0
 while [ "$i" -lt 60 ]; do
-  PART=$(find_part) && break
+  FOUND=$(find_debian) && break
   i=$((i + 1))
   sleep 1
 done
 
-if [ -z "$PART" ]; then
-  log "skip (no sd)"
+if [ -z "$FOUND" ]; then
+  log "skip (no sd/usb debian)"
   rm -f "$LOCK"
   exit 0
 fi
-log "device $PART"
+set -- $FOUND
+PART="$1"
+KIND="$2"
+log "device $PART ($KIND)"
 
-mkdir -p "$MNT"
-if ! mountpoint -q "$MNT" 2>/dev/null; then
-  if grep -q " $MNT " /proc/mounts 2>/dev/null; then
-    :
-  else
-    mount -t ext4 -o rw,noatime "$PART" "$MNT" 2>/dev/null \
-      || mount -o rw,noatime "$PART" "$MNT" 2>/dev/null \
-      || { log "mount fail $PART"; rm -f "$LOCK"; exit 1; }
-  fi
-fi
-
-if [ ! -f "$MNT/etc/debian_version" ]; then
-  log "not e2d rootfs on $PART"
-  umount "$MNT" 2>/dev/null || true
-  rm -f "$LOCK"
-  exit 1
-fi
-
-for d in proc sys dev dev/pts; do
+for d in proc sys dev dev/pts run tmp; do
   mkdir -p "$MNT/$d"
 done
 grep -q " $MNT/proc " /proc/mounts || mount -t proc proc "$MNT/proc"
 grep -q " $MNT/sys " /proc/mounts || mount -t sysfs sysfs "$MNT/sys"
 grep -q " $MNT/dev " /proc/mounts || mount -o bind /dev "$MNT/dev"
 grep -q " $MNT/dev/pts " /proc/mounts || mount -t devpts devpts "$MNT/dev/pts" 2>/dev/null || true
+grep -q " $MNT/run " /proc/mounts || mount -t tmpfs tmpfs "$MNT/run" 2>/dev/null || true
+grep -q " $MNT/tmp " /proc/mounts || mount -t tmpfs tmpfs "$MNT/tmp" 2>/dev/null || true
 
-# DNS from Android if chroot has none
+# DNS from Android
 if [ -f /system/etc/resolv.conf ]; then
   cp /system/etc/resolv.conf "$MNT/etc/resolv.conf" 2>/dev/null || true
 elif [ -f /etc/resolv.conf ]; then
@@ -780,38 +796,88 @@ else
   printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' >"$MNT/etc/resolv.conf" 2>/dev/null || true
 fi
 
-log "started (chroot $MNT)"
+# Same SSH key as Android custom (root login)
+mkdir -p "$MNT/root/.ssh" "$MNT/etc/dropbear" 2>/dev/null
+if [ -f /system/etc/dropbear/authorized_keys ]; then
+  cp /system/etc/dropbear/authorized_keys "$MNT/root/.ssh/authorized_keys" 2>/dev/null || true
+  cp /system/etc/dropbear/authorized_keys "$MNT/etc/dropbear/authorized_keys" 2>/dev/null || true
+  chmod 700 "$MNT/root/.ssh" 2>/dev/null || true
+  chmod 600 "$MNT/root/.ssh/authorized_keys" 2>/dev/null || true
+fi
 
-# Prefer existing sshd/dropbear inside Debian; fall back to getty on UART
+log "started (chroot $MNT root)"
+
+# Free :22 — Android dropbear → Debian ssh as root
+stop_android_ssh() {
+  setprop ctl.stop dropbear 2>/dev/null || true
+  setprop ctl.stop dropbeard 2>/dev/null || true
+  killall dropbear 2>/dev/null || true
+  killall dropbearmulti 2>/dev/null || true
+}
+stop_android_ssh
+
 (
+  sleep 1
+  stop_android_ssh
   if [ -x "$MNT/usr/sbin/sshd" ]; then
-    chroot "$MNT" /usr/sbin/sshd 2>/dev/null && log "sshd ok"
+    mkdir -p "$MNT/var/run/sshd" 2>/dev/null
+    chroot "$MNT" /usr/sbin/sshd 2>>"$T" && log "sshd ok :22 (root)"
   elif [ -x "$MNT/sbin/dropbear" ]; then
-    chroot "$MNT" /sbin/dropbear -R -p 2222 2>/dev/null && log "dropbear :2222"
+    chroot "$MNT" /sbin/dropbear -R -p 22 2>>"$T" && log "dropbear ok :22 (root)"
   elif [ -x "$MNT/usr/sbin/dropbear" ]; then
-    chroot "$MNT" /usr/sbin/dropbear -R -p 2222 2>/dev/null && log "dropbear :2222"
+    chroot "$MNT" /usr/sbin/dropbear -R -p 22 2>>"$T" && log "dropbear ok :22 (root)"
+  else
+    log "ssh fail (no sshd/dropbear in debian)"
   fi
 ) &
 
-# Interactive shell on UART (may share TX with logcat)
+# HDMI: stop Android UI, start Enigma2 as root
 (
+  sleep 3
+  log "ui handoff: stop zygote/surfaceflinger"
+  setprop ctl.stop zygote 2>/dev/null || true
+  setprop ctl.stop zygote_secondary 2>/dev/null || true
+  setprop ctl.stop surfaceflinger 2>/dev/null || true
   sleep 2
+  killall system_server 2>/dev/null || true
+  killall surfaceflinger 2>/dev/null || true
+
+  # init service already uid 0 — keep root env inside chroot
+  ok=0
+  if [ -x "$MNT/etc/init.d/enigma2" ]; then
+    chroot "$MNT" /bin/sh -c 'export HOME=/root USER=root LOGNAME=root; exec /etc/init.d/enigma2 start' 2>>"$T" && ok=1
+  fi
+  if [ "$ok" = 0 ] && [ -x "$MNT/usr/bin/enigma2" ]; then
+    chroot "$MNT" /bin/sh -c 'export HOME=/root USER=root LOGNAME=root; exec /usr/bin/enigma2' 2>>"$T" &
+    ok=1
+  fi
+  if [ "$ok" = 0 ] && [ -x "$MNT/usr/local/bin/enigma2" ]; then
+    chroot "$MNT" /bin/sh -c 'export HOME=/root USER=root LOGNAME=root; exec /usr/local/bin/enigma2' 2>>"$T" &
+    ok=1
+  fi
+  if [ "$ok" = 1 ]; then
+    log "enigma2 ok (uid0 root)"
+  else
+    log "enigma2 fail (no binary/init)"
+  fi
+) &
+
+# UART root shell (backup)
+(
+  sleep 5
   if [ -x "$MNT/sbin/getty" ] || [ -x "$MNT/sbin/agetty" ]; then
     GETTY=/sbin/agetty
     [ -x "$MNT/sbin/agetty" ] || GETTY=/sbin/getty
-    chroot "$MNT" "$GETTY" -L ttyAMA0 115200 vt100 2>>"$T"
+    chroot "$MNT" "$GETTY" -a root -L ttyAMA0 115200 vt100 2>>"$T"
   elif [ -x "$MNT/bin/bash" ]; then
     {
       echo ""
-      echo "=== Debian chroot (bash) — exit to leave ==="
+      echo "=== Debian chroot root ==="
     } >>"$T"
-    chroot "$MNT" /bin/bash </dev/ttyAMA0 >>"$T" 2>&1
-  elif [ -x "$MNT/bin/sh" ]; then
-    chroot "$MNT" /bin/sh </dev/ttyAMA0 >>"$T" 2>&1
+    chroot "$MNT" /bin/bash -l </dev/ttyAMA0 >>"$T" 2>&1
   fi
 ) &
 
-# Keep lock until mounts remain; script exits, children stay
 exit 0
 SH
 
@@ -1311,7 +1377,7 @@ echo "=== priv-app (launcher/root) ==="
 "$DEBUGFS" -R 'ls /etc/init' "$IMG" 2>/dev/null | tr -s ' ' '\n' | grep custom || true
 
 echo "=== props ==="
-"$DEBUGFS" -R 'cat /build.prop' "$IMG" 2>/dev/null | grep -E 'bootiptv|adb|custom|incremental|display.id|debuggable|type=|preferred|secure|uart.loglevel|sdlinux' || true
+"$DEBUGFS" -R 'cat /build.prop' "$IMG" 2>/dev/null | grep -E 'bootiptv|adb|custom|incremental|display.id|debuggable|type=|preferred|secure|uart.loglevel|sdlinux|total.memsize|total.flash' || true
 "$DEBUGFS" -R 'cat /etc/build_hw.prop' "$IMG" 2>/dev/null | grep -E 'default.launcher' || true
 
 cat > "$OUT/MANIFEST.txt" <<EOF
@@ -1329,8 +1395,9 @@ ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e (или root с пус
 adb: tcp :5555 (/system/xbin/adbd + adbd-watch); UART: cytatv-adbd / cytatv-adbd-watch
 uart: logcat I + dedicated CRASH stream + tombstones → ttyAMA0 (persist.cytatv.uart.loglevel)
 wifi: MT7662T cal+firmware; auto-enable после boot (persist.cytatv.wifi.enable=1)
-sd-linux: /system/xbin/cytatv-sd-linux.sh — auto mount+chroot e2d (persist.cytatv.sdlinux=1)
+sd-linux: /system/xbin/cytatv-sd-linux.sh — SD/USB e2d → SSH:22 + Enigma2 as root (persist.cytatv.sdlinux=1)
   manual: /system/xbin/cytatv-sd-linux.sh
+  image: firmware/e2d/sd/e2d-android-chroot.img → prepare-sdcard.sh
 rebuild: ./scripts/build-custom-android.sh
 EOF
 

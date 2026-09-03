@@ -12,10 +12,10 @@ firmware/cyta/ (бэкап ✅)
         ▼
   Custom Android + Magisk system-root + SSH/ADB
         │
-        ├── без SD: «чистый» Android
+        ├── без носителя: «чистый» Android
         │
         ▼
-  microSD e2d вставлена → init: cytatv-sd-linux.sh → chroot Debian
+  SD/USB e2d → cytatv-sd-linux.sh → Debian SSH :22 (root) + Enigma2
 ```
 
 ## 1. Бэкап
@@ -32,7 +32,7 @@ firmware/cyta/ (бэкап ✅)
 |------|------|
 | `logo.img` | 77M / 16M |
 | `kernel.img` | 141M / 15M |
-| `system.img` | 1886M / 1200M (живой ext4, debloat + root + SD Linux) |
+| `system.img` | 1886M / 1200M (живой ext4, debloat + root + SD/USB Linux) |
 
 ```bash
 ./scripts/build-custom-android.sh
@@ -55,22 +55,22 @@ sudo ./eMMC153-Worker batch \
 Откат к стоку: `firmware/cyta/`.  
 **Обязательно** wipe **userdata** в batch (старый HOME / Cyta).
 
-## 3. Linux с microSD
+## 3. Linux с SD/USB
 
-Образ уже на SD — см. [linux-install.md](linux-install.md).  
-После boot Android init сам монтирует e2d и поднимает chroot (если SD на месте).
+Образ: `e2d-android-chroot.img` — [linux-install.md](linux-install.md).  
+После boot init монтирует e2d, отдаёт **SSH :22 root** и пытается запустить **Enigma2**.
 
-Отключить автозапуск: `setprop persist.cytatv.sdlinux 0`.
+Отключить: `setprop persist.cytatv.sdlinux 0`.
 
 ## Чеклист после прошивки
 
-1. SD с e2d вставлена (если нужен Linux).
+1. SD или USB с e2d вставлена (ehci для USB).
 2. Чип в плату → 12V.
 3. UART: `./scripts/uart-capture.sh`
    - `cytatv init.bigfish.sh` / hooks
-   - при SD: `cytatv: sd-linux started`
-4. Сеть → SSH: `ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>`
-5. `su -c id` → `uid=0`
+   - при носителе: `sd-linux started` → `sshd ok :22 (root)` → `enigma2 ok|fail`
+4. Сеть → SSH в Debian: `ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>`
+5. Без носителя: `su -c id` → `uid=0` (Android)
 6. ADB: `adb connect <IP>:5555`
 7. Ручной повтор: `/system/xbin/cytatv-sd-linux.sh`
 

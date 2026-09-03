@@ -13,7 +13,7 @@ if [[ -z "$IMG" || ! -f "$IMG" ]]; then
   exit 1
 fi
 
-echo "=== Запись e2d на microSD ==="
+echo "=== Запись e2d на SD/USB ==="
 echo "Образ: $IMG ($(du -h "$IMG" | cut -f1))"
 echo ""
 echo "Доступные диски:"
@@ -73,4 +73,5 @@ fi
 sync
 diskutil eject "/dev/$DISK" || true
 
-echo "SD готова. Вставьте в STB → MENU → синяя кнопка (Linux)."
+echo "Готово. Вставьте SD или USB (ehci) в STB до cold boot."
+echo "  → cytatv-sd-linux: SSH root@Debian :22 + Enigma2 (custom Android на eMMC)."

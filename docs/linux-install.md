@@ -1,12 +1,10 @@
-# Linux (Debian e2d) на Cyta — через SD + chroot
+# Linux (Debian e2d) на Cyta — SD/USB + chroot
 
-**Цель:** Debian с microSD поверх custom Android (тот же Cyta kernel).  
-**Предусловие:** eMMC с custom Android — [flash.md](flash.md).
+**Цель:** при вставленном носителе с e2d сразу **SSH в Debian (root)** и **UI Enigma2** на HDMI.  
+Android на eMMC — только загрузка ядра/сети; MENU/синяя кнопка на этой Cyta недоступны (ADVCA).
 
-На этой операторской Cyta **нельзя** получить e2d MENU / синюю кнопку (ADVCA).  
-Рабочий путь: Android boot → детект SD → mount → **chroot** (автозапуск).
-
-Сборка образов (если нужно перезаписать SD): `firmware/e2d/` ← `./scripts/build-e2d.sh`.
+**Образ:** `firmware/e2d/sd/e2d-android-chroot.img` (перепаковка `e2d-armhf-pixel`, без 64bit).  
+Сборка: `./scripts/build-e2d.sh` → `./scripts/repack-e2d-for-android.sh`.
 
 ---
 
@@ -14,38 +12,29 @@
 
 | Путь | Назначение |
 |------|------------|
-| `firmware/e2d/sd/*.img` | запись на microSD |
-| `/system/xbin/cytatv-sd-linux.sh` | mount + chroot + getty/sshd (в custom Android) |
-
-`firmware/e2d/usb/*.upk` — только для **generic** Q22 без ADVCA Cyta; на этой приставке не использовать как основной путь.
+| `firmware/e2d/sd/e2d-android-chroot.img` | запись на microSD или USB |
+| `/system/xbin/cytatv-sd-linux.sh` | mount + chroot root: SSH :22 + Enigma2 |
 
 ---
 
-## 1. microSD (совместимый с Android kernel)
-
-Оригинальный `e2d-armhf-pixel.img` Cyta **не монтирует** (`64bit` / битый journal).  
-Нужен перепакованный образ:
+## 1. Запись носителя
 
 ```bash
-./scripts/repack-e2d-for-android.sh
+./scripts/repack-e2d-for-android.sh   # если ещё нет android-chroot
 YES=1 DISK=diskM sudo -E ./scripts/prepare-sdcard.sh firmware/e2d/sd/e2d-android-chroot.img
 ```
 
-Вставить SD **до** cold boot (или перезагрузить после вставки).
+Вставить **до** cold boot (USB — ehci-порт). SD и USB равноправны.
 
 ---
 
-## 2. Автозапуск
+## 2. Автозапуск (после `sys.boot_completed`)
 
-После `sys.boot_completed` (и из `cytatv-boot.sh`):
-
-1. Ждёт блок SD (`mmcblk1` / `mmcblk1p1`, до ~60 с).
-2. Mount → `/mnt/linux`.
-3. Проверяет e2d (`/etc/debian_version`).
-4. Bind `proc` / `sys` / `dev` / `dev/pts`.
-5. В chroot: sshd/dropbear (если есть) + login/getty на `ttyAMA0`.
-
-Лог на UART: `cytatv: sd-linux started` или `cytatv: sd-linux skip (no sd)`.
+1. Ищет Debian на SD (`mmcblk1`) затем USB (`sda`/`sdb`), только если есть `/etc/debian_version`.
+2. Mount → `/mnt/linux`, bind `proc`/`sys`/`dev`.
+3. Гасит Android dropbear; поднимает **sshd/dropbear Debian на :22** (uid 0).
+4. Останавливает zygote/surfaceflinger; стартует **Enigma2 от root**.
+5. Ключ SSH: тот же `assets/ssh/id_ed25519_q22e` (копируется в `/root/.ssh`).
 
 | Prop | |
 |------|--|
@@ -54,43 +43,34 @@ YES=1 DISK=diskM sudo -E ./scripts/prepare-sdcard.sh firmware/e2d/sd/e2d-android
 
 Ручной запуск: `/system/xbin/cytatv-sd-linux.sh`
 
-Это **не** нативный boot e2d kernel / полноценный Enigma2 через MENU — userspace Debian на Android kernel.
+UART: `cytatv: sd-linux started` → `sshd ok :22 (root)` → `enigma2 ok (uid0 root)` или `enigma2 fail …`.
+
+Это userspace Debian на **Android kernel**, не нативный e2d boot. Если HDMI не взял Enigma2 — SSH в Linux всё равно должен работать.
 
 ---
 
-## 3. После входа в Debian
+## 3. Вход
 
 ```bash
-# из Android (SSH :22):
+ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>
+# или с приставки:
 chroot /mnt/linux /bin/bash
-# или второй SSH, если в chroot подняли sshd на другом порту / после stop dropbear
-```
-
-Kodi вместо Enigma2 (внутри e2d, если systemd в chroot ограничен — может не подойти):
-
-```bash
-systemctl disable enigma2
-systemctl enable kodi
 ```
 
 ---
 
 ## Generic Q22 (не эта Cyta): MENU / `.upk`
 
-На приставках **без** ADVCA Cyta путь e2d MENU ещё возможен:
-
 ```bash
 ./scripts/prepare-e2d-usb.sh /Volumes/USB menu
 # reboot → MENU → синяя = Linux
 ```
 
-На нашей Cyta это закрыто — см. [experiments/advca-boot/](../experiments/advca-boot/).
+На нашей Cyta закрыто — [experiments/advca-boot/](../experiments/advca-boot/).
 
 ---
 
 ## Статус
 
-- [x] UART / inventory / backup
-- [x] Сборка `firmware/e2d/`
-- [x] Custom Android + root + `cytatv-sd-linux` autostart
-- [ ] ISP flash свежего custom + smoke на железе
+- [x] Custom Android + `cytatv-sd-linux` (SD/USB, SSH root, Enigma2 handoff)
+- [ ] ISP flash + smoke на железе (SSH + HDMI)
