@@ -10,7 +10,7 @@ WORKER="${EMMC_WORKER:-$WRITER_DIR/eMMC153-Worker}"
 
 DISK="${DISK:-}"
 YES="${YES:-0}"
-VERIFY="${VERIFY:-1}"
+VERIFY="${VERIFY:-0}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 

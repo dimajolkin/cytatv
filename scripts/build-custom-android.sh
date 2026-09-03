@@ -15,7 +15,11 @@ FSCK="${E2FS}/e2fsck"
 [[ -f "$CYTA_PART/system.img" ]] || { echo "нет system.img дампа"; exit 1; }
 [[ -f "$ASSETS/OpenLauncher.apk" ]] || { echo "нет $ASSETS/OpenLauncher.apk"; exit 1; }
 [[ -f "$ASSETS/Magisk.apk" ]] || { echo "нет $ASSETS/Magisk.apk"; exit 1; }
-[[ -f "$ASSETS/Settings.apk" ]] || { echo "нет $ASSETS/Settings.apk — собери: (cd ../q22e-android/settings-ui && make apk-for-firmware)"; exit 1; }
+# stock = оригинальный /app/Settings из дампа; custom = q22e settings-ui
+SETTINGS_SRC="${SETTINGS_SRC:-stock}"
+if [[ "$SETTINGS_SRC" == "custom" ]]; then
+  [[ -f "$ASSETS/Settings.apk" ]] || { echo "нет $ASSETS/Settings.apk — собери: (cd ../q22e-android/settings-ui && make apk-for-firmware)"; exit 1; }
+fi
 [[ -f "$ASSETS/magisk-arm/magisk" ]] || { echo "нет $ASSETS/magisk-arm/* — извлеки из Magisk.apk"; exit 1; }
 [[ -f "$ASSETS/dropbear-arm/dropbear" ]] || { echo "нет $ASSETS/dropbear-arm/dropbear"; exit 1; }
 [[ -f "$ASSETS/ssh/authorized_keys" ]] || { echo "нет $ASSETS/ssh/authorized_keys"; exit 1; }
@@ -73,7 +77,7 @@ KEEP_APP = {
     "LatinIME",
     "PacProcessor",
     "PrintSpooler",
-    # Settings UI — не KEEP: сток сносим, кладём наш в /priv-app/Settings
+    "Settings",           # сток Huawei; custom ставится отдельно если SETTINGS_SRC=custom
     "UserDictionaryProvider",
     "WallpaperBackup",
     "webview",
@@ -316,7 +320,15 @@ on early-init
 on post-fs-data
     mkdir /data/adb 0700 root root
     mkdir /data/adb/magisk 0755 root root
+    mkdir /data/local/tmp 0777 root root
+    start cytatv_fix_uid
     start magisk_daemon
+
+service cytatv_fix_uid /system/xbin/cytatv-fix-uid.sh
+    user root
+    group root
+    oneshot
+    disabled
 
 service magisk_daemon /system/xbin/magisk --daemon
     user root
@@ -379,7 +391,7 @@ while [ "$i" -lt 120 ]; do
   i=$((i + 1))
   sleep 1
 done
-exec /system/bin/logcat -v threadtime -b all "*:${LEVEL}" >>"$T" 2>&1
+exec /system/bin/logcat -v threadtime -b all "*:${LEVEL}" Q22eCrash:V >>"$T" 2>&1
 SH
 
 cat > "$WORKDIR/uart-shell.sh" <<'SH'
@@ -597,6 +609,61 @@ service cytatv_sd_linux /system/xbin/cytatv-sd-linux.sh
     disabled
 RC
 
+cat > "$WORKDIR/cytatv-fix-uid.sh" <<'SH'
+#!/system/bin/sh
+# Если Settings не uid 1000: снести packages.xml один раз, чтобы PM пересканировал
+# priv-app с sharedUserId (мок подписи в services.jar).
+T=/dev/ttyAMA0
+[ -c "$T" ] || T=/dev/console
+PKG=com.android.settings
+PKG_XML=/data/system/packages.xml
+FLAG=/data/local/tmp/.cytatv-uid-wiped
+
+log() { echo "cytatv-fix-uid: $*" >>"$T" 2>/dev/null; }
+
+log "START xml=$PKG_XML wiped=$( [ -f "$FLAG" ] && echo yes || echo no )"
+
+i=0
+while [ ! -f "$PKG_XML" ] && [ "$i" -lt 8 ]; do
+  log "wait packages.xml ($i)"
+  sleep 1
+  i=$((i + 1))
+done
+
+if [ ! -f "$PKG_XML" ]; then
+  log "no packages.xml yet (first scan)"
+  exit 0
+fi
+
+ENTRY=$(grep "name=\"$PKG\"" "$PKG_XML" 2>/dev/null | head -1)
+log "entry: $ENTRY"
+
+if [ -z "$ENTRY" ]; then
+  log "package not registered yet"
+  exit 0
+fi
+
+echo "$ENTRY" | grep -q 'userId="1000"' && echo "$ENTRY" | grep -q 'sharedUserId="android.uid.system"' && {
+  log "OK already uid=1000 sharedUser"
+  exit 0
+}
+
+if [ -f "$FLAG" ]; then
+  log "FAIL already wiped once, still not uid 1000"
+  exit 1
+fi
+
+log "WIPING packages.xml (+ backup/list) so PM rescan with mocked signatures"
+mkdir -p /data/local/tmp 2>/dev/null
+cp "$PKG_XML" /data/local/tmp/packages.xml.bak.cytatv 2>/dev/null
+touch "$FLAG"
+rm -f "$PKG_XML" /data/system/packages-backup.xml /data/system/packages.xml.bak \
+      /data/system/packages.list /data/system/packages-stopped.xml 2>/dev/null
+sync
+log "wiped — caller should reboot"
+exit 4
+SH
+
 cat > "$WORKDIR/cytatv-boot.sh" <<'SH'
 #!/system/bin/sh
 T=/dev/ttyAMA0
@@ -604,6 +671,10 @@ T=/dev/ttyAMA0
 echo "=== cytatv-boot.sh ===" >>"$T" 2>/dev/null
 
 echo 0 > /sys/fs/selinux/enforce 2>/dev/null
+
+# uid-patch: не блокируем boot, если packages.xml ещё нет (first boot)
+[ -x /system/xbin/cytatv-fix-uid.sh ] && /system/xbin/cytatv-fix-uid.sh
+echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
 
 # --- root check (Magisk /system/xbin/su) ---
 (
@@ -666,8 +737,48 @@ echo 0 > /sys/fs/selinux/enforce 2>/dev/null
     sleep 2
   done
   sleep 3
-  # Settings (com.android.settings): runtime + privileged perms без диалогов
   PKG=com.android.settings
+  XML=/data/system/packages.xml
+  REBOOT_FLAG=/data/local/tmp/.cytatv-uid-reboot
+  FAIL_FLAG=/data/local/tmp/.cytatv-uid-FAIL
+
+  XML_LINE=$(grep "name=\"$PKG\"" "$XML" 2>/dev/null | head -1)
+  echo "cytatv: packages.xml: $XML_LINE" >>"$T" 2>/dev/null
+
+  UID_S=$(dumpsys package "$PKG" 2>/dev/null | grep -m1 'userId=' | sed 's/.*userId=\([0-9]*\).*/\1/')
+  SHARED=$(dumpsys package "$PKG" 2>/dev/null | grep -m1 'sharedUser=' )
+  echo "cytatv: dumpsys $PKG userId=$UID_S $SHARED" >>"$T" 2>/dev/null
+
+  if [ "$UID_S" != "1000" ]; then
+    echo "cytatv: UID FAIL want=1000 got=${UID_S:-none}" >>"$T" 2>/dev/null
+    [ -x /system/xbin/cytatv-fix-uid.sh ] && /system/xbin/cytatv-fix-uid.sh
+    echo "cytatv: fix-uid retry exit=$?" >>"$T" 2>/dev/null
+
+    if [ ! -f "$REBOOT_FLAG" ]; then
+      echo patched-reboot >"$REBOOT_FLAG"
+      echo "cytatv: UID not 1000 — wipe packages.xml + REBOOT once" >>"$T" 2>/dev/null
+      sleep 2
+      reboot
+      exit 0
+    fi
+
+    echo "cytatv: ========================================" >>"$T" 2>/dev/null
+    echo "cytatv: FATAL Settings uid=${UID_S:-none} (need 1000)" >>"$T" 2>/dev/null
+    echo "cytatv: xml=$XML_LINE" >>"$T" 2>/dev/null
+    echo "cytatv: STOP zygote (boot broken on purpose)" >>"$T" 2>/dev/null
+    echo "cytatv: ========================================" >>"$T" 2>/dev/null
+    echo "uid=$UID_S xml=$XML_LINE" >"$FAIL_FLAG"
+    setprop cytatv.settings.uid_ok 0
+    sleep 1
+    stop zygote
+    stop
+    exit 1
+  fi
+
+  echo "cytatv: Settings UID OK (1000)" >>"$T" 2>/dev/null
+  setprop cytatv.settings.uid_ok 1
+  rm -f "$FAIL_FLAG" "$REBOOT_FLAG" 2>/dev/null
+
   for P in \
     android.permission.ACCESS_FINE_LOCATION \
     android.permission.ACCESS_COARSE_LOCATION \
@@ -681,17 +792,14 @@ echo 0 > /sys/fs/selinux/enforce 2>/dev/null
     pm grant "$PKG" "$P" >/dev/null 2>&1
   done
   echo "cytatv: pm grant $PKG done" >>"$T" 2>/dev/null
-  # Magisk: auto-allow su для Settings (policy=2 ALLOW)
+
   SU=/system/xbin/su
   [ -x "$SU" ] || SU=/system/bin/su
   if [ -x /system/xbin/magisk ] || [ -x "$SU" ]; then
-    UID_S=$(dumpsys package "$PKG" 2>/dev/null | grep -m1 'userId=' | sed 's/.*userId=\([0-9]*\).*/\1/')
-    if [ -n "$UID_S" ]; then
-      /system/xbin/magisk --sqlite \
-        "REPLACE INTO policies (uid,policy,until,logging,notification) VALUES($UID_S,2,0,1,0)" \
-        >/dev/null 2>&1
-      echo "cytatv: magisk allow uid=$UID_S ($PKG)" >>"$T" 2>/dev/null
-    fi
+    /system/xbin/magisk --sqlite \
+      "REPLACE INTO policies (uid,policy,until,logging,notification) VALUES(1000,2,0,1,0)" \
+      >/dev/null 2>&1
+    echo "cytatv: magisk allow uid=1000 ($PKG)" >>"$T" 2>/dev/null
   fi
   [ -x /system/xbin/cytatv-sd-linux.sh ] && /system/xbin/cytatv-sd-linux.sh
 ) &
@@ -746,6 +854,7 @@ write_back "$WORKDIR/wifi-boot.sh" /xbin/wifi-boot.sh 0100755
 write_back "$WORKDIR/adbd-tcp.sh" /xbin/adbd-tcp.sh 0100755
 write_back "$WORKDIR/cytatv-sd-linux.sh" /xbin/cytatv-sd-linux.sh 0100755
 write_back "$ADBD" /xbin/adbd 0100755
+write_back "$WORKDIR/cytatv-fix-uid.sh" /xbin/cytatv-fix-uid.sh 0100755
 write_back "$WORKDIR/cytatv-boot.sh" /xbin/cytatv-boot.sh 0100755
 
 # Android 7 (Huawei bigfish): /etc/init/custom_*.rc может не подхватиться init.
@@ -759,6 +868,7 @@ path = sys.argv[1]
 text = open(path, encoding="utf-8", errors="replace").read()
 text = re.sub(r'\n# cytatv[^\n]*\n(?:.*\n)*?(?=\n[^#\s]|\Z)', '\n', text, flags=re.M)
 text = re.sub(r'\n\[ -x /system/xbin/uart-logcat\.sh \].*\n', '\n', text)
+text = re.sub(r'\n\[ -x /system/xbin/cytatv-fix-uid\.sh \].*\n', '\n', text)
 text = re.sub(r'\n\[ -x /system/xbin/cytatv-boot\.sh \].*\n', '\n', text)
 early = (
     '\n# cytatv early marker\n'
@@ -766,7 +876,8 @@ early = (
     'echo "=== cytatv init.bigfish.sh ===" > /dev/console\n'
 )
 hook = (
-    '\n# cytatv boot: uart, adb, root, ssh, sd-linux\n'
+    '\n# cytatv boot: uid-patch (sync, до PM), затем остальное в фоне\n'
+    '[ -x /system/xbin/cytatv-fix-uid.sh ] && /system/xbin/cytatv-fix-uid.sh\n'
     '[ -x /system/xbin/cytatv-boot.sh ] && /system/xbin/cytatv-boot.sh &\n'
 )
 lines = text.splitlines(keepends=True)
@@ -854,21 +965,38 @@ echo "=== OpenLauncher + Magisk (priv-app) + su + dropbear ==="
 write_back "$ASSETS/OpenLauncher.apk" /priv-app/OpenLauncher/OpenLauncher.apk 0100644
 write_back "$ASSETS/Magisk.apk" /priv-app/Magisk/Magisk.apk 0100644
 
-# Наш Settings UI → только /priv-app/Settings (сток /app/Settings уже снят в strip)
-echo "=== install /priv-app/Settings (Q22E, stock removed) ==="
-"$DEBUGFS" -w -R "rm /priv-app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
-"$DEBUGFS" -w -R "rmdir /priv-app/Settings" "$IMG" 2>/dev/null || true
-"$DEBUGFS" -w -R "mkdir /priv-app/Settings" "$IMG" 2>/dev/null || true
-# на всякий случай добить остатки стока
-"$DEBUGFS" -w -R "rm /app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
-for _o in arm arm64; do
-  "$DEBUGFS" -w -R "rm /app/Settings/oat/$_o/Settings.odex" "$IMG" 2>/dev/null || true
-  "$DEBUGFS" -w -R "rm /app/Settings/oat/$_o/Settings.vdex" "$IMG" 2>/dev/null || true
-  "$DEBUGFS" -w -R "rmdir /app/Settings/oat/$_o" "$IMG" 2>/dev/null || true
-done
-"$DEBUGFS" -w -R "rmdir /app/Settings/oat" "$IMG" 2>/dev/null || true
-"$DEBUGFS" -w -R "rmdir /app/Settings" "$IMG" 2>/dev/null || true
-write_back "$ASSETS/Settings.apk" /priv-app/Settings/Settings.apk 0100644
+if [[ "$SETTINGS_SRC" == "custom" ]]; then
+  echo "=== install /priv-app/Settings (Q22E custom, stock /app/Settings removed) ==="
+  "$DEBUGFS" -w -R "rm /priv-app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "rmdir /priv-app/Settings" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "mkdir /priv-app/Settings" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "rm /app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
+  for _o in arm arm64; do
+    "$DEBUGFS" -w -R "rm /app/Settings/oat/$_o/Settings.odex" "$IMG" 2>/dev/null || true
+    "$DEBUGFS" -w -R "rm /app/Settings/oat/$_o/Settings.vdex" "$IMG" 2>/dev/null || true
+    "$DEBUGFS" -w -R "rmdir /app/Settings/oat/$_o" "$IMG" 2>/dev/null || true
+  done
+  "$DEBUGFS" -w -R "rmdir /app/Settings/oat" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "rmdir /app/Settings" "$IMG" 2>/dev/null || true
+  write_back "$ASSETS/Settings.apk" /priv-app/Settings/Settings.apk 0100644
+else
+  echo "=== stock Settings: keep /app/Settings (apk+odex), drop custom priv-app ==="
+  "$DEBUGFS" -w -R "rm /priv-app/Settings/Settings.apk" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -w -R "rmdir /priv-app/Settings" "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -R 'ls /app/Settings' "$IMG" 2>/dev/null || true
+  "$DEBUGFS" -R 'ls /app/Settings/oat/arm' "$IMG" 2>/dev/null || true
+fi
+
+# Мок PackageManager.compareSignatures — всегда (сток и custom Settings)
+if [[ ! -f "$ASSETS/services.jar" ]]; then
+  echo "=== patch services.jar (compareSignatures mock) ==="
+  "$ROOT/scripts/patch-services-pm-signatures.sh"
+fi
+echo "=== install deodexed /framework/services.jar (no odex) ==="
+write_back "$ASSETS/services.jar" /framework/services.jar 0100644
+"$DEBUGFS" -w -R "rm /framework/oat/arm/services.odex" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "rm /framework/oat/arm/services.vdex" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "rm /framework/oat/arm/services.art" "$IMG" 2>/dev/null || true
 
 # UI extras: терминал, сеть, файлы, игра, браузер, Wi‑Fi хаб
 echo "=== extras (TermOnePlus / WifiAnalyzer / Amaze / 2048 / Lightning / WifiHub) ==="
@@ -935,7 +1063,7 @@ logo   $(wc -c <"$OUT/logo.img")
 kernel $(wc -c <"$OUT/kernel.img")
 system $(wc -c <"$OUT/system.img")
 launcher: com.benny.openlauncher (OpenLauncher 0.7.4)
-settings: /priv-app/Settings ← q22e-android/settings-ui; Magisk su 0 / su 1000
+settings: SETTINGS_SRC=$SETTINGS_SRC + services.jar compareSignatures mock (always)
 apps: TermOnePlus, WifiAnalyzer, Amaze, 2048, Lightning, WifiHub (Wi‑Fi)
 root: /system/xbin/su (Magisk, ADVCA kernel — без boot-patch)
 ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e (или root с пустым паролем)
