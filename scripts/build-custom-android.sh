@@ -13,8 +13,10 @@ FSCK="${E2FS}/e2fsck"
 
 [[ -x "$DEBUGFS" ]] || { echo "brew install e2fsprogs"; exit 1; }
 [[ -f "$CYTA_PART/system.img" ]] || { echo "нет system.img дампа"; exit 1; }
-[[ -f "$ASSETS/OpenLauncher.apk" ]] || { echo "нет $ASSETS/OpenLauncher.apk"; exit 1; }
+[[ -f "$ASSETS/Lawnchair.apk" ]] || { echo "нет $ASSETS/Lawnchair.apk"; exit 1; }
 [[ -f "$ASSETS/Magisk.apk" ]] || { echo "нет $ASSETS/Magisk.apk"; exit 1; }
+[[ -f "$ASSETS/magisk-arm/cytasu-daemon" ]] || { echo "нет $ASSETS/magisk-arm/cytasu-daemon — собери cytasu"; exit 1; }
+[[ -f "$ASSETS/magisk-arm/su" ]] || { echo "нет $ASSETS/magisk-arm/su (cytasu client)"; exit 1; }
 # stock = оригинальный /app/Settings из дампа; custom = q22e settings-ui
 SETTINGS_SRC="${SETTINGS_SRC:-stock}"
 if [[ "$SETTINGS_SRC" == "custom" ]]; then
@@ -23,6 +25,19 @@ fi
 [[ -f "$ASSETS/magisk-arm/magisk" ]] || { echo "нет $ASSETS/magisk-arm/* — извлеки из Magisk.apk"; exit 1; }
 [[ -f "$ASSETS/dropbear-arm/dropbear" ]] || { echo "нет $ASSETS/dropbear-arm/dropbear"; exit 1; }
 [[ -f "$ASSETS/ssh/authorized_keys" ]] || { echo "нет $ASSETS/ssh/authorized_keys"; exit 1; }
+BASH_BIN="$ASSETS/bash-arm/bash"
+if [[ ! -f "$BASH_BIN" ]]; then
+  echo "=== скачать bash (Inknyto/arm-binaries bash.tgz) ==="
+  mkdir -p "$ASSETS/bash-arm" "$ASSETS/bash-arm/.dl"
+  curl -fsSL "https://raw.githubusercontent.com/Inknyto/arm-binaries/main/bash.tgz" -o "$ASSETS/bash-arm/.dl/bash.tgz"
+  tar -xzf "$ASSETS/bash-arm/.dl/bash.tgz" -C "$ASSETS/bash-arm/.dl"
+  cp "$ASSETS/bash-arm/.dl/system/xbin/bash" "$BASH_BIN"
+  [[ -f "$ASSETS/bash-arm/.dl/system/etc/inputrc" ]] && cp "$ASSETS/bash-arm/.dl/system/etc/inputrc" "$ASSETS/bash-arm/inputrc"
+  chmod 755 "$BASH_BIN"
+  rm -rf "$ASSETS/bash-arm/.dl"
+fi
+[[ -f "$BASH_BIN" ]] || { echo "нет $BASH_BIN"; exit 1; }
+file "$BASH_BIN" | grep -q 'ARM' || { echo "bash не ARM: $(file "$BASH_BIN")"; exit 1; }
 ADBD="$ASSETS/adbd-arm/adbd"
 if [[ ! -f "$ADBD" ]]; then
   echo "=== скачать adbd (Inknyto/arm-binaries, static ARM) ==="
@@ -184,10 +199,10 @@ for k, v in [
     ("persist.sys.usb.config", "none"),
     ("service.adb.tcp.port", "5555"),
     ("persist.adb.tcp.port", "5555"),
-    ("persist.service.adb.enable", "0"),
+    ("persist.service.adb.enable", "1"),
     ("persist.service.consoleenable", "1"),
-    # V=всё на UART (115200 может сыпать); I/D — тише: setprop persist.cytatv.uart.loglevel I
-    ("persist.cytatv.uart.loglevel", "V"),
+    # I=тише на UART; краши всегда отдельно (uart-crash + AndroidRuntime stream)
+    ("persist.cytatv.uart.loglevel", "I"),
     ("persist.cytatv.uart.shell", "1"),
     ("persist.cytatv.wifi.enable", "1"),
     ("persist.cytatv.sdlinux", "1"),
@@ -213,7 +228,7 @@ if os.path.isfile(hw_path):
     hw = del_prop(hw, "ro.product.stb.vmxClientVersion")
     hw = del_prop(hw, "ro.product.stb.vmxTaVersion")
     hw = set_prop(hw, "ro.hw.sys.net.add.iptvroute", "0")
-    hw = set_prop(hw, "ro.hw.sys.default.launcher", "com.benny.openlauncher")
+    hw = set_prop(hw, "ro.hw.sys.default.launcher", "ch.deletescape.lawnchair")
     # без HmtProvision — не ждать wizard; сеть поднимает HmtStbBgService
     hw = set_prop(hw, "ro.hw.sys.boot.haswizard", "0")
     # IPTV DHCP opts выкл., но ключи оставляем (стек Huawei их читает)
@@ -235,7 +250,7 @@ reserve = """<?xml version="1.0" encoding="UTF-8"?>
   <app packageName="com.huawei.hmt.hmtNetworkService"><persist>true</persist></app>
   <app packageName="com.huawei.hmt.stbbgservice"><persist>true</persist></app>
   <app packageName="com.huawei.toast"><persist>true</persist></app>
-  <app packageName="com.benny.openlauncher"><persist>true</persist></app>
+  <app packageName="ch.deletescape.lawnchair"><persist>true</persist></app>
   <app packageName="com.topjohnwu.magisk"><persist>true</persist></app>
 </Application>
 """
@@ -257,62 +272,179 @@ bp = open(f"{wd}/build.prop", encoding="utf-8", errors="replace").read()
 for k, v in [
     ("ro.build.type", "userdebug"),
     ("ro.build.tags", "test-keys"),
-    ("ro.oem_preferred_pkg", "com.benny.openlauncher"),
+    ("ro.oem_preferred_pkg", "ch.deletescape.lawnchair"),
 ]:
     bp = set_prop(bp, k, v)
 open(f"{wd}/build.prop", "w", encoding="utf-8").write(bp)
 print("build.prop launcher/root OK")
 PY
 
+cat > "$WORKDIR/adbd-tcp.sh" <<'SH'
+#!/system/bin/sh
+# ADB over TCP :5555 — developer mode + права + exec adbd.
+T=/dev/ttyAMA0
+[ -c "$T" ] || T=/dev/console
+ADB=/system/xbin/adbd
+PORT=5555
+
+log() { echo "cytatv-adbd: $*" >>"$T" 2>/dev/null; }
+
+log "START uid=$(id) selinux=$(getenforce 2>/dev/null || echo n/a)"
+
+[ -x "$ADB" ] || { log "FAIL no executable $ADB"; exit 1; }
+chmod 755 "$ADB" 2>/dev/null
+chown root:shell "$ADB" 2>/dev/null
+
+i=0
+while [ ! -d /data/local/tmp ] && [ "$i" -lt 60 ]; do
+  mkdir -p /data/local/tmp 2>/dev/null
+  i=$((i + 1))
+  sleep 1
+done
+
+# дождаться system_server / settings (иначе put молча no-op)
+i=0
+while [ "$i" -lt 90 ]; do
+  getprop sys.boot_completed 2>/dev/null | grep -q 1 && break
+  # settings может ответить раньше boot_completed
+  settings get global adb_enabled >/dev/null 2>&1 && break
+  i=$((i + 1))
+  sleep 2
+done
+
+setprop persist.sys.usb.config none
+setprop service.adb.tcp.port "$PORT"
+setprop persist.adb.tcp.port "$PORT"
+setprop persist.service.adb.enable 1
+
+# Режим разработчика + USB debugging (обязательно для TCP adbd)
+enable_dev() {
+  settings put global development_settings_enabled 1
+  settings put global adb_enabled 1
+  setprop persist.sys.adb.enable 1
+}
+
+enable_dev
+sleep 1
+DEV=$(settings get global development_settings_enabled 2>/dev/null)
+ADB_EN=$(settings get global adb_enabled 2>/dev/null)
+# retry до 5 раз
+r=0
+while [ "$ADB_EN" != "1" ] && [ "$r" -lt 5 ]; do
+  log "adb_enabled='$ADB_EN' (want 1) — retry $r"
+  enable_dev
+  sleep 2
+  DEV=$(settings get global development_settings_enabled 2>/dev/null)
+  ADB_EN=$(settings get global adb_enabled 2>/dev/null)
+  r=$((r + 1))
+done
+
+if [ "$ADB_EN" != "1" ]; then
+  log "WARN adb_enabled still='$ADB_EN' — пробуем через su settings / content"
+  su 0 settings put global adb_enabled 1 2>/dev/null
+  su 1000 settings put global adb_enabled 1 2>/dev/null
+  ADB_EN=$(settings get global adb_enabled 2>/dev/null)
+fi
+
+setprop ctl.stop adbd 2>/dev/null
+killall adbd 2>/dev/null
+sleep 1
+
+mkdir -p /data/misc/adb 2>/dev/null
+chmod 771 /data/misc/adb 2>/dev/null
+chown system:shell /data/misc/adb 2>/dev/null
+if [ -f /system/etc/adb_keys ]; then
+  cp /system/etc/adb_keys /data/misc/adb/adb_keys
+  chmod 640 /data/misc/adb/adb_keys
+  chown system:shell /data/misc/adb/adb_keys 2>/dev/null
+  log "adb_keys installed ($(wc -c </data/misc/adb/adb_keys) bytes)"
+else
+  log "WARN no /system/etc/adb_keys"
+fi
+
+log "CHECK ro.debuggable=$(getprop ro.debuggable) ro.secure=$(getprop ro.secure) ro.adb.secure=$(getprop ro.adb.secure)"
+log "CHECK development=$DEV adb_enabled=$ADB_EN tcp=$(getprop service.adb.tcp.port)"
+log "CHECK binary=$(ls -lZ "$ADB" 2>/dev/null || ls -l "$ADB")"
+log "CHECK /data/misc/adb=$(ls -ldZ /data/misc/adb 2>/dev/null || ls -ld /data/misc/adb)"
+
+if [ "$ADB_EN" != "1" ]; then
+  log "FAIL developer/adb not enabled — starting adbd anyway"
+fi
+
+log "exec $ADB as $(id) (expect :$PORT)"
+exec "$ADB" >>"$T" 2>&1
+SH
+
+cat > "$WORKDIR/adbd-watch.sh" <<'SH'
+#!/system/bin/sh
+T=/dev/ttyAMA0
+[ -c "$T" ] || T=/dev/console
+log() { echo "cytatv-adbd-watch: $*" >>"$T" 2>/dev/null; }
+
+log "START"
+sleep 20
+
+while true; do
+  DEV=$(settings get global development_settings_enabled 2>/dev/null)
+  ADB_EN=$(settings get global adb_enabled 2>/dev/null)
+  if [ "$ADB_EN" != "1" ] || [ "$DEV" != "1" ]; then
+    log "re-enable developer (dev=$DEV adb=$ADB_EN)"
+    settings put global development_settings_enabled 1 2>/dev/null
+    settings put global adb_enabled 1 2>/dev/null
+  fi
+
+  setprop service.adb.tcp.port 5555
+  setprop persist.adb.tcp.port 5555
+
+  if ! pidof adbd >/dev/null 2>&1; then
+    log "adbd dead — restart"
+    /system/xbin/adbd-tcp.sh &
+    sleep 6
+  fi
+
+  LISTEN=0
+  grep -q ':15B3 ' /proc/net/tcp 2>/dev/null && LISTEN=1
+  grep -q ':15B3 ' /proc/net/tcp6 2>/dev/null && LISTEN=1
+
+  IP=$(ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+  [ -z "$IP" ] && IP=$(ip -4 addr show wlan0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+  [ -z "$IP" ] && IP=$(getprop dhcp.eth0.ipaddress)
+
+  if [ "$LISTEN" = "1" ]; then
+    log "OK :5555 pid=$(pidof adbd) dev=$DEV adb=$ADB_EN ip=${IP:-?} → adb connect ${IP:-IP}:5555"
+  else
+    log "NOT listen :5555 pid=$(pidof adbd) dev=$DEV adb=$ADB_EN ip=${IP:-?} — restart"
+    killall adbd 2>/dev/null
+    sleep 1
+    /system/xbin/adbd-tcp.sh &
+  fi
+
+  sleep 20
+done
+SH
+
 cat > "$WORKDIR/custom_adb.rc" <<'RC'
-# STB без USB gadget — /sbin/adbd в ramdisk нет; свой adbd в /system/xbin
+# ADB TCP :5555 — root, как eng/userdebug adbd
 on early-boot
     setprop persist.sys.usb.config none
-    setprop persist.service.adb.enable 0
     setprop service.adb.tcp.port 5555
     setprop persist.adb.tcp.port 5555
-    start cytatv_adbd
+    setprop persist.service.adb.enable 1
 
 on property:sys.boot_completed=1
     start cytatv_adbd
 
 service cytatv_adbd /system/xbin/adbd-tcp.sh
-    class core
+    class late_start
     user root
-    group root
+    group root system shell inet misc
     oneshot
     disabled
-
-on property:init.svc.cytatv_adbd=stopped
-    start cytatv_adbd
 RC
 
-cat > "$WORKDIR/adbd-tcp.sh" <<'SH'
-#!/system/bin/sh
-T=/dev/ttyAMA0
-[ -c "$T" ] || T=/dev/console
-ADB=/system/xbin/adbd
-PID=/data/local/tmp/adbd.pid
-
-setprop persist.sys.usb.config none
-setprop persist.service.adb.enable 0
-setprop service.adb.tcp.port 5555
-setprop persist.adb.tcp.port 5555
-setprop ctl.stop adbd 2>/dev/null
-
-[ -x "$ADB" ] || { echo "cytatv: no $ADB" >>"$T"; exit 1; }
-
-if [ -f "$PID" ]; then
-  old=$(cat "$PID" 2>/dev/null)
-  [ -n "$old" ] && kill -0 "$old" 2>/dev/null && exit 0
-fi
-
-"$ADB" &
-echo $! >"$PID"
-echo "cytatv: adbd tcp :5555 pid=$(cat "$PID")" >>"$T" 2>/dev/null
-SH
-
-# Kernel ADVCA — Magisk boot-patch недоступен. Root через system + permissive.
+# Kernel ADVCA — Magisk boot-patch недоступен.
+# Root: cytasu-daemon (init, полные capabilities) + /system/xbin/su клиент.
+# Magisk оставляем для менеджера/модулей, но su больше не Magisk (Access denied без boot-patch).
 cat > "$WORKDIR/custom_root.rc" <<'RC'
 on early-init
     write /sys/fs/selinux/enforce 0
@@ -322,6 +454,7 @@ on post-fs-data
     mkdir /data/adb/magisk 0755 root root
     mkdir /data/local/tmp 0777 root root
     start cytatv_fix_uid
+    start cytasu_daemon
     start magisk_daemon
 
 service cytatv_fix_uid /system/xbin/cytatv-fix-uid.sh
@@ -329,6 +462,10 @@ service cytatv_fix_uid /system/xbin/cytatv-fix-uid.sh
     group root
     oneshot
     disabled
+
+service cytasu_daemon /system/xbin/cytasu-daemon
+    user root
+    group root
 
 service magisk_daemon /system/xbin/magisk --daemon
     user root
@@ -338,6 +475,7 @@ service magisk_daemon /system/xbin/magisk --daemon
 
 on property:sys.boot_completed=1
     write /sys/fs/selinux/enforce 0
+    start cytasu_daemon
     start magisk_daemon
 RC
 
@@ -349,6 +487,12 @@ cp /system/etc/dropbear/authorized_keys /data/dropbear/.ssh/authorized_keys
 chmod 700 /data/dropbear /data/dropbear/.ssh
 chmod 600 /data/dropbear/.ssh/authorized_keys
 cd /data/dropbear || exit 1
+# Prefer GNU bash when present (custom image)
+if [ -x /system/xbin/bash ]; then
+  export SHELL=/system/xbin/bash
+elif [ -x /system/bin/bash ]; then
+  export SHELL=/system/bin/bash
+fi
 # -R hostkeys, -B пустой пароль root, ключ: assets/ssh/id_ed25519_q22e
 exec /system/xbin/dropbear -R -p 22 -B
 SH
@@ -373,25 +517,99 @@ on property:init.svc.dropbear=stopped
     start dropbear
 RC
 
-# Kernel уже на console=ttyAMA0; зеркалим Android logcat + пробуем RX-shell.
+# Kernel уже на console=ttyAMA0; зеркалим Android logcat + отдельно краши.
 cat > "$WORKDIR/uart-logcat.sh" <<'SH'
 #!/system/bin/sh
 T=/dev/ttyAMA0
 [ -c "$T" ] || T=/dev/console
 LEVEL=$(getprop persist.cytatv.uart.loglevel)
-[ -z "$LEVEL" ] && LEVEL=V
+[ -z "$LEVEL" ] && LEVEL=I
 {
   echo ""
-  echo "=== cytatv uart-logcat *:${LEVEL} -> $T ==="
+  echo "=== cytatv uart-logcat *:${LEVEL} + crash/AndroidRuntime -> $T ==="
 } >>"$T"
-( cat /proc/kmsg >>"$T" 2>/dev/null ) &
+
+# kmsg уже идёт на console=ttyAMA0 из kernel — не дублируем (забивает UART)
+
 i=0
 while [ "$i" -lt 120 ]; do
   getprop init.svc.logd 2>/dev/null | grep -q running && break
   i=$((i + 1))
   sleep 1
 done
-exec /system/bin/logcat -v threadtime -b all "*:${LEVEL}" Q22eCrash:V >>"$T" 2>&1
+
+# Отдельный поток: только краши (не тонут в WiFi/HDMI)
+(
+  echo "=== cytatv CRASH stream (logcat -b crash + AndroidRuntime) ===" >>"$T"
+  /system/bin/logcat -v threadtime -b crash -b main -b system \
+    AndroidRuntime:E ActivityManager:I Process:I DEBUG:E FatalAppExit:E Q22eCrash:V '*:S' \
+    >>"$T" 2>&1
+) &
+
+# Общий поток (по уровню, по умолчанию I — меньше шума)
+exec /system/bin/logcat -v threadtime -b all \
+  "*:${LEVEL}" AndroidRuntime:E Q22eCrash:V \
+  >>"$T" 2>&1
+SH
+
+# Tombstones + периодический dump crash-буфера → UART (для native/Java без нашего APK)
+cat > "$WORKDIR/uart-crash.sh" <<'SH'
+#!/system/bin/sh
+T=/dev/ttyAMA0
+[ -c "$T" ] || T=/dev/console
+DIR=/data/tombstones
+MARK=/data/local/tmp/.cytatv-tomb-seen
+mkdir -p /data/local/tmp "$DIR" 2>/dev/null
+touch "$MARK" 2>/dev/null
+
+log() { echo "cytatv-crash: $*" >>"$T" 2>/dev/null; }
+
+log "START watching $DIR + logcat -b crash"
+
+# стартовый снимок буфера crash
+{
+  echo ""
+  echo "======== cytatv CRASH BUFFER DUMP (boot) ========"
+  /system/bin/logcat -d -b crash -v threadtime 2>/dev/null
+  echo "======== end crash buffer ========"
+} >>"$T" 2>/dev/null
+
+LAST_AM=""
+while true; do
+  # новые tombstones
+  for f in "$DIR"/tombstone_*; do
+    [ -f "$f" ] || continue
+    grep -qxF "$f" "$MARK" 2>/dev/null && continue
+    echo "$f" >>"$MARK"
+    {
+      echo ""
+      echo "======== TOMBSTONE $f ========"
+      head -c 65536 "$f" 2>/dev/null
+      echo ""
+      echo "======== end tombstone ========"
+    } >>"$T" 2>/dev/null
+    log "dumped $f"
+  done
+
+  # ActivityManager: Process ... has died / Force finishing
+  LINE=$(/system/bin/logcat -d -b main -b system -v brief \
+    ActivityManager:I AndroidRuntime:E '*:S' 2>/dev/null | tail -1)
+  if [ -n "$LINE" ] && [ "$LINE" != "$LAST_AM" ]; then
+    echo "$LINE" | grep -qiE 'died|FATAL|Force finishing|crash|ANR' && {
+      LAST_AM="$LINE"
+      {
+        echo ""
+        echo "======== cytatv PROCESS DIE / FATAL ========"
+        echo "$LINE"
+        /system/bin/logcat -d -b crash -b main -v threadtime \
+          AndroidRuntime:E ActivityManager:I DEBUG:E '*:S' 2>/dev/null | tail -80
+        echo "======== end ========"
+      } >>"$T" 2>/dev/null
+    }
+  fi
+
+  sleep 2
+done
 SH
 
 cat > "$WORKDIR/uart-shell.sh" <<'SH'
@@ -698,18 +916,19 @@ echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
 ) &
 
 [ -x /system/xbin/uart-logcat.sh ] && /system/xbin/uart-logcat.sh &
+[ -x /system/xbin/uart-crash.sh ] && /system/xbin/uart-crash.sh &
 [ -x /system/xbin/uart-shell.sh ] && /system/xbin/uart-shell.sh &
 
 [ -x /system/xbin/adbd-tcp.sh ] && /system/xbin/adbd-tcp.sh &
+[ -x /system/xbin/adbd-watch.sh ] && /system/xbin/adbd-watch.sh &
 (
   i=0
-  while [ "$i" -lt 60 ]; do
-    [ -x /system/xbin/adbd-tcp.sh ] && /system/xbin/adbd-tcp.sh
-    pid=$(cat /data/local/tmp/adbd.pid 2>/dev/null)
-    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && break
+  while [ "$i" -lt 30 ]; do
+    pidof adbd >/dev/null 2>&1 && grep -q ':15B3 ' /proc/net/tcp 2>/dev/null && break
     i=$((i + 1))
     sleep 5
   done
+  echo "cytatv: adbd after boot pid=$(pidof adbd) listen5555=$(grep -c ':15B3 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null | tr '\n' '+')" >>"$T" 2>/dev/null
 ) &
 
 (
@@ -811,9 +1030,11 @@ on early-boot
 
 on property:init.svc.logd=running
     start uart_logcat
+    start uart_crash
 
 on property:sys.boot_completed=1
     start uart_logcat
+    start uart_crash
 
 service uart_logcat /system/xbin/uart-logcat.sh
     user root
@@ -821,8 +1042,17 @@ service uart_logcat /system/xbin/uart-logcat.sh
     oneshot
     disabled
 
+service uart_crash /system/xbin/uart-crash.sh
+    user root
+    group root system log
+    oneshot
+    disabled
+
 on property:init.svc.uart_logcat=stopped
     start uart_logcat
+
+on property:init.svc.uart_crash=stopped
+    start uart_crash
 RC
 
 write_back() {
@@ -849,11 +1079,17 @@ write_back "$WORKDIR/custom_sdlinux.rc" /etc/init/custom_sdlinux.rc
 "$DEBUGFS" -w -R "mkdir /mnt" "$IMG" 2>/dev/null || true
 "$DEBUGFS" -w -R "mkdir /mnt/linux" "$IMG" 2>/dev/null || true
 write_back "$WORKDIR/uart-logcat.sh" /xbin/uart-logcat.sh 0100755
+write_back "$WORKDIR/uart-crash.sh" /xbin/uart-crash.sh 0100755
 write_back "$WORKDIR/uart-shell.sh" /xbin/uart-shell.sh 0100755
 write_back "$WORKDIR/wifi-boot.sh" /xbin/wifi-boot.sh 0100755
 write_back "$WORKDIR/adbd-tcp.sh" /xbin/adbd-tcp.sh 0100755
+write_back "$WORKDIR/adbd-watch.sh" /xbin/adbd-watch.sh 0100755
 write_back "$WORKDIR/cytatv-sd-linux.sh" /xbin/cytatv-sd-linux.sh 0100755
 write_back "$ADBD" /xbin/adbd 0100755
+if [[ -f "$ASSETS/adb/adb_keys" ]]; then
+  write_back "$ASSETS/adb/adb_keys" /etc/adb_keys 0100644
+  echo "=== adb_keys → /etc/adb_keys (host pubkey) ==="
+fi
 write_back "$WORKDIR/cytatv-fix-uid.sh" /xbin/cytatv-fix-uid.sh 0100755
 write_back "$WORKDIR/cytatv-boot.sh" /xbin/cytatv-boot.sh 0100755
 
@@ -904,12 +1140,17 @@ fi
 
 # Дублируем сервис в logd.rc — тот же каталог, что и logd.
 "$DEBUGFS" -R "dump /etc/init/logd.rc $WORKDIR/logd.rc" "$IMG" 2>/dev/null
-if [[ -f "$WORKDIR/logd.rc" ]] && ! grep -q 'uart_logcat' "$WORKDIR/logd.rc"; then
+if [[ -f "$WORKDIR/logd.rc" ]] && ! grep -q 'uart_crash' "$WORKDIR/logd.rc"; then
+  # убрать старый только-uart_logcat блок если был
+  if ! grep -q 'uart_logcat' "$WORKDIR/logd.rc"; then
+    :
+  fi
   cat >> "$WORKDIR/logd.rc" <<'RC'
 
-# cytatv: logcat → ttyAMA0
+# cytatv: logcat + crashes → ttyAMA0
 on property:init.svc.logd=running
     start uart_logcat
+    start uart_crash
 
 service uart_logcat /system/xbin/uart-logcat.sh
     user root
@@ -917,11 +1158,20 @@ service uart_logcat /system/xbin/uart-logcat.sh
     oneshot
     disabled
 
+service uart_crash /system/xbin/uart-crash.sh
+    user root
+    group root system log
+    oneshot
+    disabled
+
 on property:init.svc.uart_logcat=stopped
     start uart_logcat
+
+on property:init.svc.uart_crash=stopped
+    start uart_crash
 RC
   write_back "$WORKDIR/logd.rc" /etc/init/logd.rc
-  echo "logd.rc: uart_logcat service appended"
+  echo "logd.rc: uart_logcat + uart_crash appended"
 fi
 
 # WiFi cal живёт в userdata — после wipe Net/WiFi без EEPROM не поднимается.
@@ -958,11 +1208,12 @@ for _fw in mt7662t_patch_e1_hdr.bin mt7662t_firmware_e1.bin; do
   fi
 done
 
-echo "=== OpenLauncher + Magisk (priv-app) + su + dropbear ==="
-"$DEBUGFS" -w -R "rm -r /priv-app/Lawnchair" "$IMG" 2>/dev/null || true
-"$DEBUGFS" -w -R "mkdir /priv-app/OpenLauncher" "$IMG" 2>/dev/null || true
+echo "=== Lawnchair + Magisk (priv-app) + cytasu su + dropbear ==="
+"$DEBUGFS" -w -R "rm -r /priv-app/OpenLauncher" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "rm /priv-app/OpenLauncher/OpenLauncher.apk" "$IMG" 2>/dev/null || true
+"$DEBUGFS" -w -R "mkdir /priv-app/Lawnchair" "$IMG" 2>/dev/null || true
 "$DEBUGFS" -w -R "mkdir /priv-app/Magisk" "$IMG" 2>/dev/null || true
-write_back "$ASSETS/OpenLauncher.apk" /priv-app/OpenLauncher/OpenLauncher.apk 0100644
+write_back "$ASSETS/Lawnchair.apk" /priv-app/Lawnchair/Lawnchair.apk 0100644
 write_back "$ASSETS/Magisk.apk" /priv-app/Magisk/Magisk.apk 0100644
 
 if [[ "$SETTINGS_SRC" == "custom" ]]; then
@@ -1014,12 +1265,18 @@ write_back "$ASSETS/extras/Lightning.apk" /app/Lightning/Lightning.apk 0100644
 write_back "$ASSETS/extras/WifiHub.apk" /app/WifiHub/WifiHub.apk 0100644
 
 write_back "$ASSETS/magisk-arm/magisk" /xbin/magisk 0100755
-write_back "$ASSETS/magisk-arm/magisk" /xbin/su 0100755
 write_back "$ASSETS/magisk-arm/magiskpolicy" /xbin/magiskpolicy 0100755
 write_back "$ASSETS/magisk-arm/busybox" /xbin/busybox 0100755
-# также в bin на случай PATH
+# cytasu: рабочий root без Magisk boot-patch (ADVCA)
+write_back "$ASSETS/magisk-arm/cytasu-daemon" /xbin/cytasu-daemon 0100755
+write_back "$ASSETS/magisk-arm/su" /xbin/su 0100755
 write_back "$ASSETS/magisk-arm/magisk" /bin/magisk 0100755
-write_back "$ASSETS/magisk-arm/magisk" /bin/su 0100755
+write_back "$ASSETS/magisk-arm/su" /bin/su 0100755
+write_back "$ASSETS/bash-arm/bash" /xbin/bash 0100755
+write_back "$ASSETS/bash-arm/bash" /bin/bash 0100755
+if [[ -f "$ASSETS/bash-arm/inputrc" ]]; then
+  write_back "$ASSETS/bash-arm/inputrc" /etc/inputrc 0100644
+fi
 
 "$DEBUGFS" -w -R "mkdir /etc/dropbear" "$IMG" 2>/dev/null || true
 write_back "$ASSETS/ssh/authorized_keys" /etc/dropbear/authorized_keys 0100600
@@ -1040,7 +1297,7 @@ echo "=== remaining /app ==="
 "$DEBUGFS" -R 'ls /app' "$IMG" 2>/dev/null | tr -s '[:space:]' '\n' | grep -v '^[0-9.]*$' | grep -v '^$' | sort -u
 
 echo "=== priv-app (launcher/root) ==="
-"$DEBUGFS" -R 'ls /priv-app/OpenLauncher' "$IMG" 2>/dev/null || true
+"$DEBUGFS" -R 'ls /priv-app/Lawnchair' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /priv-app/Magisk' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /priv-app/Settings' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/TermOnePlus' "$IMG" 2>/dev/null || true
@@ -1049,7 +1306,7 @@ echo "=== priv-app (launcher/root) ==="
 "$DEBUGFS" -R 'ls /app/Game2048' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/Lightning' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /app/WifiHub' "$IMG" 2>/dev/null || true
-"$DEBUGFS" -R 'ls /xbin' "$IMG" 2>/dev/null | tr -s ' ' '\n' | grep -E 'magisk|su|busybox|dropbear|uart|cytatv|adbd' || true
+"$DEBUGFS" -R 'ls /xbin' "$IMG" 2>/dev/null | tr -s ' ' '\n' | grep -E 'magisk|su|cytasu|busybox|bash|dropbear|uart|cytatv|adbd' || true
 "$DEBUGFS" -R 'ls /etc/dropbear' "$IMG" 2>/dev/null || true
 "$DEBUGFS" -R 'ls /etc/init' "$IMG" 2>/dev/null | tr -s ' ' '\n' | grep custom || true
 
@@ -1058,18 +1315,19 @@ echo "=== props ==="
 "$DEBUGFS" -R 'cat /etc/build_hw.prop' "$IMG" 2>/dev/null | grep -E 'default.launcher' || true
 
 cat > "$OUT/MANIFEST.txt" <<EOF
-custom: Cyta dump, IPTV removed, OpenLauncher HOME, Magisk system-root, dropbear :22, SD Linux chroot
+custom: Cyta dump, IPTV removed, Lawnchair HOME, cytasu root, Magisk app, dropbear :22, SD Linux chroot
 logo   $(wc -c <"$OUT/logo.img")
 kernel $(wc -c <"$OUT/kernel.img")
 system $(wc -c <"$OUT/system.img")
-launcher: com.benny.openlauncher (OpenLauncher 0.7.4)
+launcher: ch.deletescape.lawnchair (Lawnchair 1.2.0)
 settings: SETTINGS_SRC=$SETTINGS_SRC + services.jar compareSignatures mock (always)
 apps: TermOnePlus, WifiAnalyzer, Amaze, 2048, Lightning, WifiHub (Wi‑Fi)
-root: /system/xbin/su (Magisk, ADVCA kernel — без boot-patch)
+root: cytasu-daemon + /system/xbin/su (ADVCA — без Magisk boot-patch)
+bash: /system/xbin/bash (Inknyto static ARM)
 ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e (или root с пустым паролем)
   ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>
-adb: tcp :5555 (/system/xbin/adbd, без USB gadget)
-uart: logcat+kmsg TX; uart-shell RX (persist.cytatv.uart.shell=1)
+adb: tcp :5555 (/system/xbin/adbd + adbd-watch); UART: cytatv-adbd / cytatv-adbd-watch
+uart: logcat I + dedicated CRASH stream + tombstones → ttyAMA0 (persist.cytatv.uart.loglevel)
 wifi: MT7662T cal+firmware; auto-enable после boot (persist.cytatv.wifi.enable=1)
 sd-linux: /system/xbin/cytatv-sd-linux.sh — auto mount+chroot e2d (persist.cytatv.sdlinux=1)
   manual: /system/xbin/cytatv-sd-linux.sh
