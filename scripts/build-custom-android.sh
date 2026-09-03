@@ -17,10 +17,18 @@ FSCK="${E2FS}/e2fsck"
 [[ -f "$ASSETS/Magisk.apk" ]] || { echo "нет $ASSETS/Magisk.apk"; exit 1; }
 [[ -f "$ASSETS/magisk-arm/cytasu-daemon" ]] || { echo "нет $ASSETS/magisk-arm/cytasu-daemon — собери cytasu"; exit 1; }
 [[ -f "$ASSETS/magisk-arm/su" ]] || { echo "нет $ASSETS/magisk-arm/su (cytasu client)"; exit 1; }
-# stock = оригинальный /app/Settings из дампа; custom = q22e settings-ui
-SETTINGS_SRC="${SETTINGS_SRC:-stock}"
+# stock = оригинальный /app/Settings из дампа; custom = q22e settings-ui (по умолчанию)
+SETTINGS_SRC="${SETTINGS_SRC:-custom}"
+SETTINGS_UI="${SETTINGS_UI:-$ROOT/../q22e-android/settings-ui}"
+SKIP_SETTINGS_BUILD="${SKIP_SETTINGS_BUILD:-0}"
 if [[ "$SETTINGS_SRC" == "custom" ]]; then
-  [[ -f "$ASSETS/Settings.apk" ]] || { echo "нет $ASSETS/Settings.apk — собери: (cd ../q22e-android/settings-ui && make apk-for-firmware)"; exit 1; }
+  if [[ "$SKIP_SETTINGS_BUILD" != "1" ]]; then
+    [[ -d "$SETTINGS_UI" ]] || { echo "нет $SETTINGS_UI — укажи SETTINGS_UI=… или SKIP_SETTINGS_BUILD=1 + готовый assets/Settings.apk"; exit 1; }
+    echo "=== q22e Settings (system flavor) → $ASSETS/Settings.apk ==="
+    make -C "$SETTINGS_UI" apk-for-firmware FIRMWARE_ASSETS="$ASSETS"
+  fi
+  [[ -f "$ASSETS/Settings.apk" ]] || { echo "нет $ASSETS/Settings.apk — собери: (cd $SETTINGS_UI && make apk-for-firmware)"; exit 1; }
+  echo "Settings.apk: $(ls -la "$ASSETS/Settings.apk" | awk '{print $5,$6,$7,$8,$9}')"
 fi
 [[ -f "$ASSETS/magisk-arm/magisk" ]] || { echo "нет $ASSETS/magisk-arm/* — извлеки из Magisk.apk"; exit 1; }
 [[ -f "$ASSETS/dropbear-arm/dropbear" ]] || { echo "нет $ASSETS/dropbear-arm/dropbear"; exit 1; }
@@ -484,28 +492,28 @@ RC
 
 cat > "$WORKDIR/dropbear.sh" <<'SH'
 #!/system/bin/sh
+# -F: foreground — иначе fork + oneshot → init.svc.dropbear=stopped при живом демоне
+case "$(getprop persist.cytatv.ssh)" in
+  0) exit 0 ;;
+esac
 export HOME=/data/dropbear
 mkdir -p /data/dropbear/.ssh
-cp /system/etc/dropbear/authorized_keys /data/dropbear/.ssh/authorized_keys
+cp /system/etc/dropbear/authorized_keys /data/dropbear/.ssh/authorized_keys 2>/dev/null
 chmod 700 /data/dropbear /data/dropbear/.ssh
-chmod 600 /data/dropbear/.ssh/authorized_keys
+chmod 600 /data/dropbear/.ssh/authorized_keys 2>/dev/null
 cd /data/dropbear || exit 1
-# Prefer GNU bash when present (custom image)
 if [ -x /system/xbin/bash ]; then
   export SHELL=/system/xbin/bash
 elif [ -x /system/bin/bash ]; then
   export SHELL=/system/bin/bash
 fi
 # -R hostkeys, -B пустой пароль root, ключ: assets/ssh/id_ed25519_q22e
-exec /system/xbin/dropbear -R -p 22 -B
+exec /system/xbin/dropbear -F -R -p 22 -B
 SH
 
 cat > "$WORKDIR/custom_ssh.rc" <<'RC'
 on post-fs-data
     mkdir /data/dropbear 0700 root root
-
-on boot
-    start dropbear
 
 on property:sys.boot_completed=1
     start dropbear
@@ -513,11 +521,13 @@ on property:sys.boot_completed=1
 service dropbear /system/xbin/dropbear.sh
     user root
     group root
-    oneshot
     disabled
 
-on property:init.svc.dropbear=stopped
+on property:persist.cytatv.ssh=1
     start dropbear
+
+on property:persist.cytatv.ssh=0
+    stop dropbear
 RC
 
 # Kernel уже на console=ttyAMA0; зеркалим Android logcat + отдельно краши.
@@ -1009,7 +1019,10 @@ echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
     i=$((i + 1))
     sleep 2
   done
-  [ -x /system/xbin/dropbear.sh ] && /system/xbin/dropbear.sh &
+  # fallback if init service ещё не поднял (-F в dropbear.sh → нужен фон)
+  if ! pidof dropbear >/dev/null 2>&1; then
+    [ -x /system/xbin/dropbear.sh ] && /system/xbin/dropbear.sh &
+  fi
 ) &
 
 [ -x /system/xbin/wifi-boot.sh ] && /system/xbin/wifi-boot.sh &

@@ -26,7 +26,8 @@ firmware/cyta/ (бэкап ✅)
 
 ## 2. Custom Android (из Cyta, без IPTV)
 
-Файлы в **`firmware/custom/`** (сборка: `./scripts/build-custom-android.sh`):
+Файлы в **`firmware/custom/`** (сборка: `./scripts/build-custom-android.sh`).  
+По умолчанию `SETTINGS_SRC=custom` — перед образом собирается свежий Q22E Settings из `../q22e-android/settings-ui`.
 
 | Файл | Слот |
 |------|------|
@@ -38,6 +39,8 @@ firmware/cyta/ (бэкап ✅)
 ./scripts/build-custom-android.sh
 
 YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
+# или одной командой со свежей сборкой:
+# YES=1 BUILD=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
 ```
 
 Или вручную:

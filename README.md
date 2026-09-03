@@ -10,7 +10,7 @@ TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, cu
 | UART | ✅ boot log @ 115200, **только чтение** |
 | Прошивка | ✅ **ISP eMMC** ([docs/flash.md](docs/flash.md)) |
 | Backup | ✅ `firmware/cyta/` |
-| Custom Android | Lawnchair, cytasu root, Magisk app, SSH, ADB tcp, extras |
+| Custom Android | Lawnchair, cytasu, Q22E Settings, Magisk app, SSH, ADB tcp, extras |
 | Linux e2d | SD/USB → **SSH root + Enigma2** после boot ([linux-install.md](docs/linux-install.md)) |
 
 MENU / `.upk` / синяя кнопка на этой Cyta **недоступны** (ADVCA) — см. [experiments/advca-boot/](experiments/advca-boot/).
@@ -18,8 +18,10 @@ MENU / `.upk` / синяя кнопка на этой Cyta **недоступн�
 ## Быстрый путь
 
 ```bash
-# 1) Custom Android (root + SD/USB Linux autostart)
+# 1) Custom Android (Lawnchair + cytasu + Q22E Settings + bash)
 ./scripts/build-custom-android.sh
+# или со сборкой прямо перед прошивкой:
+# YES=1 BUILD=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
 YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
 # diskN = Socket ~7.8G (diskutil list), только Terminal.app + sudo
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Обёртка: custom Android → eMMC Socket через eMMC153-Worker batch.
-# Запускать из Terminal.app: YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
+# Запускать из Terminal.app:
+#   YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
+# Свежий system.img + Q22E Settings:
+#   YES=1 BUILD=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -11,11 +14,23 @@ WORKER="${EMMC_WORKER:-$WRITER_DIR/eMMC153-Worker}"
 DISK="${DISK:-}"
 YES="${YES:-0}"
 VERIFY="${VERIFY:-0}"
+# BUILD=1 — перед прошивкой пересобрать system.img (включая свежий Q22E Settings)
+BUILD="${BUILD:-0}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
+if [[ "$BUILD" == "1" ]]; then
+  echo "=== BUILD=1 → build-custom-android.sh (SETTINGS_SRC=custom) ==="
+  # без sudo: debugfs/e2fsck не требуют root; образы пишем в firmware/custom
+  if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
+    sudo -u "$SUDO_USER" -E env SETTINGS_SRC=custom "$ROOT/scripts/build-custom-android.sh"
+  else
+    SETTINGS_SRC=custom "$ROOT/scripts/build-custom-android.sh"
+  fi
+fi
+
 [[ -f "$CUSTOM/logo.img" && -f "$CUSTOM/kernel.img" && -f "$CUSTOM/system.img" ]] \
-  || die "нет logo/kernel/system в $CUSTOM — ./scripts/build-custom-android.sh"
+  || die "нет logo/kernel/system в $CUSTOM — BUILD=1 … или ./scripts/build-custom-android.sh"
 
 if [[ ! -x "$WORKER" ]]; then
   echo "=== build eMMC153-Worker ==="
