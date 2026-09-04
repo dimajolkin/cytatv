@@ -1,8 +1,9 @@
 # Build artifacts (images) — not source
 /build/
 
-# legacy firmware blobs (local)
-/firmware/
+# локальные SSH-ключи (генерация: q22e keys)
+/assets/ssh/*
+!/assets/ssh/.keep
 
 *.img
 *.IMG

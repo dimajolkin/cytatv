@@ -1,4 +1,4 @@
-package builder
+package ubuntu
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 	"cytatv/internal/config"
 )
 
-// Ubuntu downloads Base, builds Docker image, runs mkimage.
-func Ubuntu(cfg config.Config) error {
+// Build — Ubuntu Base → docker mkimage → cfg.Ubuntu.Output.
+func Build(cfg config.Config) error {
 	u := cfg.Ubuntu
 	outDir := filepath.Dir(u.Output)
 	dlDir := filepath.Join(outDir, "dl")
@@ -118,4 +118,9 @@ func run(dir, name string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func fileExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && !st.IsDir()
 }

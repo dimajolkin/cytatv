@@ -1,0 +1,9 @@
+# ISP-дамп стока → build/original/
+dir: build/original
+# предпочитаемое имя; init также примет original.dmg / любой *.img|*.dmg в dir
+image: original.img
+xml: configs/emmc_partitions_q22e.xml
+# ext4 → filesystems/ (debugfs rdump); userdata — wifi cal
+filesystems:
+  - system
+  - userdata

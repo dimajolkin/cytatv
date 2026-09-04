@@ -3,7 +3,7 @@ version: "24.04.4"
 codename: noble
 size_gb: 2
 base_url: "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release"
-authorized_keys: firmware/custom/assets/ssh/authorized_keys
+authorized_keys: assets/ssh/authorized_keys
 output: build/ubuntu/ubuntu-chroot.img
 
 flash:

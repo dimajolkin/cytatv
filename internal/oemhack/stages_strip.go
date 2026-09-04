@@ -18,7 +18,7 @@ var keepApp = map[string]bool{
 	"UserDictionaryProvider": true, "WallpaperBackup": true, "webview": true,
 }
 
-func stageStripOperator(b *Build) error {
+func stageStripOperator(b *Job) error {
 	fsRoot := b.Cfg.FilesystemDir
 	if _, err := os.Stat(fsRoot); err != nil {
 		return fmt.Errorf("нет filesystem dump %s", fsRoot)

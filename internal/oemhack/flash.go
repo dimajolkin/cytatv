@@ -1,21 +1,24 @@
-package builder
+package oemhack
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	emmc "github.com/dimajolkin/eMMC153-Writer"
 
 	"cytatv/internal/config"
 )
 
-// AndroidOemHackFlash пишет logo+kernel+system (+userdata wipe) на Socket.
-func AndroidOemHackFlash(cfg config.Config) error {
+var diskNameRE = regexp.MustCompile(`^disk[0-9]+$`)
+
+// Flash — ISP Socket → logo+kernel+system (+userdata wipe).
+func Flash(cfg config.Config) error {
 	flash := cfg.AndroidOemHack.Flash
 	if flash.Build {
 		fmt.Println("=== flash.build → android-oem-hack build ===")
-		if err := AndroidOemHack(cfg); err != nil {
+		if err := Build(cfg); err != nil {
 			return err
 		}
 	}
@@ -25,8 +28,9 @@ func AndroidOemHackFlash(cfg config.Config) error {
 		return fmt.Errorf("android_oem_hack.output_dir обязателен")
 	}
 	for _, name := range []string{"logo.img", "kernel.img", "system.img"} {
-		if !fileExists(filepath.Join(android, name)) {
-			return fmt.Errorf("нет %s/%s — сначала: q22e android-oem-hack build", android, name)
+		p := filepath.Join(android, name)
+		if _, err := os.Stat(p); err != nil {
+			return fmt.Errorf("нет %s — сначала: q22e android-oem-hack build", p)
 		}
 	}
 
@@ -76,7 +80,7 @@ func AndroidOemHackFlash(cfg config.Config) error {
 	}
 
 	if os.Geteuid() != 0 {
-		return fmt.Errorf("нужен root: sudo go run ./cmd/q22e android-oem-hack flash -d %s --force\n(из Terminal.app с Full Disk Access; из Cursor /dev/rdisk часто blocked)", disk)
+		return fmt.Errorf("нужен root: sudo go run ./cmd/q22e android-oem-hack flash -d %s --force\n(из Terminal.app с Full Disk Access)", disk)
 	}
 
 	fmt.Println()

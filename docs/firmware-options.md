@@ -4,7 +4,7 @@
 
 | Цель | Как |
 |------|-----|
-| Откат Cyta | `firmware/cyta/` |
+| Откат Cyta | `build/original/` |
 | Custom Android + root | `q22e android-oem-hack build` → `flash` (ISP) |
 | Linux Ubuntu chroot | SD/USB — [ubuntu-chroot.md](ubuntu-chroot.md) |
 

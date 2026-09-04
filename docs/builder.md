@@ -31,7 +31,7 @@ system_apps:
     make_target: apk-for-firmware
 ```
 
-`assets[]` — файлы в `assets_dir` (url / seed_dir). Все пути — только из yaml.
+`assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`). Все пути — только из yaml.
 
 `services_patch` — Docker baksmali/smali для `services.jar` (мок compareSignatures).
 

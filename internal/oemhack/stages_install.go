@@ -1,12 +1,13 @@
 package oemhack
 
 import (
+	"cytatv/internal/config"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
-func stageInstallApps(b *Build) error {
+func stageInstallApps(b *Job) error {
 	mode644 := "0100644"
 	b.RmTree("/priv-app/OpenLauncher")
 	b.Rm("/priv-app/OpenLauncher/OpenLauncher.apk")
@@ -58,7 +59,7 @@ func stageInstallApps(b *Build) error {
 	return nil
 }
 
-func installSystemApp(b *Build, app SystemAppSpec, mode string) error {
+func installSystemApp(b *Job, app config.SystemAppSpec, mode string) error {
 	if app.Guest == "" || app.APK == "" {
 		return fmt.Errorf("system_apps[%s]: guest и apk обязательны для install", app.ID)
 	}
@@ -81,7 +82,7 @@ func installSystemApp(b *Build, app SystemAppSpec, mode string) error {
 	return b.WriteBack(b.asset(app.APK), app.Guest, mode)
 }
 
-func stageInstallRootTools(b *Build) error {
+func stageInstallRootTools(b *Job) error {
 	mode755 := "0100755"
 	mode600 := "0100600"
 	mode644 := "0100644"

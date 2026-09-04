@@ -1,5 +1,8 @@
-# internal/ubuntu — Docker context для Ubuntu Base chroot
+# internal/ubuntu
 
-`q22e ubuntu build` → `docker build` из этой папки → `build/ubuntu/ubuntu-chroot.img`.
+Docker context (`Dockerfile`, `scripts/mkimage.sh`) + Go builder:
 
-Конфиг: `configs/ubuntu.yaml`. Доки: [docs/ubuntu-chroot.md](../../docs/ubuntu-chroot.md).
+- `builder.go` — `ubuntu.Build`
+- `flash.go` — `ubuntu.Flash`
+
+CLI: `q22e ubuntu build|flash`. Конфиг: `configs/ubuntu.yaml`.

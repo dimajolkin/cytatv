@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func stageWriteInitAndHooks(b *Build) error {
+func stageWriteInitAndHooks(b *Job) error {
 	mode644 := "0100644"
 	mode755 := "0100755"
 

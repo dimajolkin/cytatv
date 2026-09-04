@@ -11,7 +11,7 @@ import (
 )
 
 // PatchServicesJar deodexes services.odex, mocks compareSignatures* → MATCH (0), writes assets/services.jar.
-func (b *Build) PatchServicesJar() error {
+func (b *Job) PatchServicesJar() error {
 	if b.Cfg.ServicesDockerImage == "" || b.Cfg.ServicesWorkDir == "" {
 		return fmt.Errorf("services_patch.docker_image и work_dir обязательны")
 	}

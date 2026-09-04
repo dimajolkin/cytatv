@@ -1,10 +1,10 @@
 # Android OEM hack — патченый system с дампа Cyta
 
 output_dir: build/android-oem-hack
-partitions_dir: firmware/cyta/extracted/partitions
-filesystem_dir: firmware/cyta/extracted/filesystems/system
+partitions_dir: build/original/partitions
+filesystem_dir: build/original/filesystems/system
 assets_dir: build/android-oem-hack/assets
-seed_dir: firmware/custom/assets
+seed_dir: assets # logo/ssh из репо; остальное — url/from
 e2fs_sbin: /opt/homebrew/opt/e2fsprogs/sbin
 
 services_patch:
@@ -23,7 +23,7 @@ su:
 # HiSi splash (JPEG → logo.img), часть android-oem-hack
 logo:
   enabled: true
-  jpeg: firmware/custom/assets/logo/neutral.jpg
+  jpeg: assets/logo/neutral.jpg
   size_mib: 16
 
 flash:
@@ -48,35 +48,80 @@ system_apps:
     make_target: apk-for-firmware
 
 # Файлы для pipeline: скачивание в assets_dir, затем install*
-# path — относительно assets_dir
+# path — относительно assets_dir; from — архив уже в assets_dir
 assets:
   - path: Lawnchair.apk
+    url: https://github.com/LawnchairLauncher/lawnchair/releases/download/1.2.0.1884/Lawnchair-1.2.0.1884.apk
+
   - path: Magisk.apk
+    url: https://github.com/topjohnwu/Magisk/releases/download/v25.2/Magisk-v25.2.apk
+
   - path: magisk-arm/cytasu-daemon
     optional: true # собирается при su.enabled
   - path: magisk-arm/su
     optional: true
+
   - path: magisk-arm/magisk
+    from: Magisk.apk
+    chmod: "0755"
+    require_arm: true
+    extract:
+      member: lib/armeabi-v7a/libmagisk32.so
   - path: magisk-arm/magiskpolicy
+    from: Magisk.apk
+    chmod: "0755"
+    require_arm: true
+    extract:
+      member: lib/armeabi-v7a/libmagiskpolicy.so
   - path: magisk-arm/busybox
+    from: Magisk.apk
+    chmod: "0755"
+    require_arm: true
+    extract:
+      member: lib/armeabi-v7a/libbusybox.so
+
   - path: dropbear-arm/dropbear
+    url: https://github.com/ribbons/android-dropbear/releases/download/DROPBEAR_2026.94/dropbear-armv7a-linux-androideabi.zip
+    chmod: "0755"
+    require_arm: true
+    extract:
+      member: dropbear
+      also:
+        - member: dropbearkey
+          path: dropbear-arm/dropbearkey
+        - member: scp
+          path: dropbear-arm/scp
   - path: dropbear-arm/dropbearkey
+    optional: true # из zip выше
   - path: dropbear-arm/scp
-  - path: ssh/authorized_keys
+    optional: true
+
+  - path: ssh/authorized_keys # seed: q22e keys → assets/ssh/
+
   - path: extras/TermOnePlus.apk
+    url: https://f-droid.org/repo/com.termoneplus_570.apk
   - path: extras/WifiAnalyzer.apk
+    url: https://f-droid.org/repo/com.vrem.wifianalyzer_72.apk
   - path: extras/Game2048.apk
+    url: https://f-droid.org/repo/org.secuso.privacyfriendly2048_100.apk
   - path: extras/Amaze.apk
+    url: https://f-droid.org/repo/com.amaze.filemanager_125.apk
   - path: extras/Lightning.apk
+    url: https://f-droid.org/repo/acr.browser.lightning_101.apk
   - path: extras/WifiHub.apk
+    optional: true # com.cytatv.wifihub — локальная сборка
+
   - path: logo/logo-neutral.img
     optional: true # собирается при logo.enabled
+  - path: logo/neutral.jpg # seed_dir/assets/logo/
+
   - path: adb/adb_keys
     optional: true
   - path: services.jar
     optional: true
   - path: Settings.apk
     optional: true
+
   - path: bash-arm/bash
     url: https://raw.githubusercontent.com/Inknyto/arm-binaries/main/bash.tgz
     chmod: "0755"

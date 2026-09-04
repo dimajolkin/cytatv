@@ -6,8 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"cytatv/internal/builder"
+	"cytatv/internal/cli"
 	"cytatv/internal/config"
+	"cytatv/internal/oemhack"
+	"cytatv/internal/original"
+	"cytatv/internal/ubuntu"
 )
 
 func main() {
@@ -20,11 +23,13 @@ func main() {
 	}
 
 	rootCmd.AddCommand(
-		cmd("wizard", []string{"w"}, "Интерактивный выбор сборки", builder.Wizard),
+		cmd("wizard", []string{"w"}, "Интерактивный выбор сборки", cli.Wizard),
+		initCmd(),
+		keysCmd(),
 		ubuntuCmd(),
-		cmd("settings", []string{"s"}, "system_apps из конфига (repo → apk)", builder.Settings),
+		cmd("settings", []string{"s"}, "system_apps из конфига (repo → apk)", oemhack.Settings),
 		androidOemHackCmd(),
-		cmd("list", []string{"ls", "l"}, "Показать артефакты в build/", builder.List),
+		cmd("list", []string{"ls", "l"}, "Показать артефакты в build/", cli.List),
 		uartCmd(),
 	)
 
@@ -35,7 +40,7 @@ func main() {
 }
 
 func loadConfig() (config.Config, error) {
-	root, err := builder.Root()
+	root, err := cli.Root()
 	if err != nil {
 		return config.Config{}, err
 	}
@@ -61,6 +66,42 @@ func cmd(use string, aliases []string, short string, fn func(config.Config) erro
 	}
 }
 
+func initCmd() *cobra.Command {
+	var force bool
+	c := &cobra.Command{
+		Use:   "init",
+		Short: "Дамп original.img|.dmg → partitions + filesystems",
+		Long:  "Ищет build/original/original.img или .dmg (сырой ISP-дамп), режет разделы и rdump system/userdata.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+			return original.Init(cfg, force)
+		},
+	}
+	c.Flags().BoolVar(&force, "force", false, "пересобрать partitions/filesystems")
+	return c
+}
+
+func keysCmd() *cobra.Command {
+	var force bool
+	c := &cobra.Command{
+		Use:     "keys",
+		Aliases: []string{"ssh-keys"},
+		Short:   "Сгенерировать SSH ed25519 → assets/ssh/",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+			return cli.GenerateSSHKeys(cfg, force)
+		},
+	}
+	c.Flags().BoolVar(&force, "force", false, "перезаписать существующие ключи")
+	return c
+}
+
 func ubuntuCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:     "ubuntu",
@@ -72,7 +113,7 @@ func ubuntuCmd() *cobra.Command {
 			Use:     "build",
 			Aliases: []string{"b"},
 			Short:   "Ubuntu Base → build/ubuntu/ubuntu-chroot.img",
-			RunE:    withConfig(builder.Ubuntu),
+			RunE:    withConfig(ubuntu.Build),
 		},
 		ubuntuFlashCmd(),
 	)
@@ -102,7 +143,7 @@ func ubuntuFlashCmd() *cobra.Command {
 			if len(args) > 0 {
 				img = args[0]
 			}
-			return builder.UbuntuFlash(cfg, img)
+			return ubuntu.Flash(cfg, img)
 		},
 	}
 	c.Flags().StringVarP(&disk, "disk", "d", "", "цель diskN (или ubuntu.flash.disk в yaml)")
@@ -121,7 +162,7 @@ func androidOemHackCmd() *cobra.Command {
 			Use:     "build",
 			Aliases: []string{"b"},
 			Short:   "Патч system → build/android-oem-hack/",
-			RunE:    withConfig(builder.AndroidOemHack),
+			RunE:    withConfig(oemhack.Build),
 		},
 		aohFlashCmd(),
 	)
@@ -153,7 +194,7 @@ func aohFlashCmd() *cobra.Command {
 			if cmd.Flags().Changed("build") {
 				f.Build = buildFirst
 			}
-			return builder.AndroidOemHackFlash(cfg)
+			return oemhack.Flash(cfg)
 		},
 	}
 	c.Flags().StringVarP(&disk, "disk", "d", "", "цель diskN (или flash.disk); иначе автопоиск Socket")
@@ -182,7 +223,7 @@ func uartCmd() *cobra.Command {
 			if len(args) > 0 {
 				port = args[0]
 			}
-			return builder.UartCapture(cfg, port)
+			return cli.UartCapture(cfg, port)
 		},
 	}
 	c.Flags().IntVarP(&baud, "baud", "b", 115200, "скорость (или uart.baud в yaml)")

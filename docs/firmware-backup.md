@@ -1,28 +1,20 @@
-# Backup прошивки Cyta
+# Backup / original dump
 
-## Статус
-
-**Выполнен** через программатор eMMC153 (ISP).
-
-Каталог: **`firmware/cyta/`**.
-
-## Содержимое
+Каталог: **`build/original/`** (gitignore через `/build/`).
 
 | Путь | Что |
 |------|-----|
-| `firmware/cyta/eMMC153 Socket Media.dmg` | сырой образ с ридера |
-| `firmware/cyta/extracted/emmc_full.img` | полный eMMC (~7.3 GB) |
-| `firmware/cyta/extracted/partitions/*.img` | разделы по таблице |
-| `firmware/cyta/extracted/filesystems/` | распакованные FS |
-| `firmware/cyta/extracted.zip` | архив extracted |
+| `build/original/original.img` | полный eMMC (~7.3G), или |
+| `build/original/original.dmg` | сырой дамп с ридера (как «eMMC153 Socket Media.dmg») |
+| `build/original/partitions/*.img` | разделы (`q22e init`) |
+| `build/original/filesystems/` | system + userdata (`debugfs rdump`) |
 
 ```bash
-shasum -a 256 firmware/cyta/extracted/emmc_full.img
-shasum -a 256 firmware/cyta/extracted/partitions/*
+mkdir -p build/original
+# dd с Socket или скопируй сырой .dmg с ридера как original.dmg
+sudo dd if=/dev/rdiskN of=build/original/original.img bs=4m status=progress
+
+go run ./cmd/q22e init
 ```
 
-Размеры слотов: [inventory.md](inventory.md). XML: `firmware/custom/emmc_partitions_q22e.xml`.
-
-## ADB
-
-Скрипт `./scripts/adb-backup.sh` — только если на приставке есть ADB. На операторской Cyta debugging вырезан.
+XML слотов: `configs/emmc_partitions_q22e.xml`. Откат на чип — `partitions/` или полный образ.

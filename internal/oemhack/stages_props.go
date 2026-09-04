@@ -20,7 +20,7 @@ func delProp(text, key string) string {
 	return pat.ReplaceAllString(text, "")
 }
 
-func stagePatchPropsAndScripts(b *Build) error {
+func stagePatchPropsAndScripts(b *Job) error {
 	if err := b.materializeScripts(); err != nil {
 		return err
 	}

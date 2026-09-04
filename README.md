@@ -1,6 +1,6 @@
 # cytatv
 
-TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, custom Android, Debian e2d.  
+TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, custom Android, Ubuntu chroot.  
 Рабочая среда: **macOS** + ISP eMMC153.
 
 ## Статус
@@ -9,15 +9,20 @@ TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, cu
 |---|---|
 | UART | ✅ boot log @ 115200, **только чтение** |
 | Прошивка | ✅ **ISP eMMC** ([docs/flash.md](docs/flash.md)) |
-| Backup | ✅ `firmware/cyta/` |
+| Backup | ✅ `build/original/` (`q22e init`) |
 | Custom Android | Lawnchair, cytasu, Q22E Settings, Magisk app, SSH, ADB tcp, extras → `android-oem-hack` |
-| Linux | Ubuntu Base armhf chroot — [ubuntu-chroot.md](docs/ubuntu-chroot.md) (e2d legacy: [linux-install.md](docs/linux-install.md)) |
+| Linux | Ubuntu Base armhf chroot — [ubuntu-chroot.md](docs/ubuntu-chroot.md) |
 
-MENU / `.upk` / синяя кнопка на этой Cyta **недоступны** (ADVCA) — см. [experiments/advca-boot/](experiments/advca-boot/).
+MENU / `.upk` / синяя кнопка на этой Cyta **недоступны** (ADVCA).
 
 ## Быстрый путь
 
 ```bash
+# 0) дамп + ключи (один раз)
+# положить original.img или original.dmg в build/original/
+go run ./cmd/q22e init
+go run ./cmd/q22e keys
+
 # 1) android-oem-hack
 go run ./cmd/q22e android-oem-hack build
 sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force
@@ -39,25 +44,21 @@ go run ./cmd/q22e uart
 |------|--|
 | **[docs/flash.md](docs/flash.md)** | ISP → Android + чеклист |
 | [docs/ubuntu-chroot.md](docs/ubuntu-chroot.md) | Ubuntu Base armhf + chroot |
-| [docs/linux-install.md](docs/linux-install.md) | e2d legacy |
 | [docs/emmc-isp.md](docs/emmc-isp.md) | пины, оффсеты |
 | [docs/uart.md](docs/uart.md) | UART |
 | [docs/macos-setup.md](docs/macos-setup.md) | brew / порты |
 | [docs/README.md](docs/README.md) | индекс |
-| [experiments/advca-boot/](experiments/advca-boot/) | ISP/ADVCA boot-эксперименты |
 
 ## Структура
 
 ```
-firmware/cyta/              # дамп Cyta
-firmware/custom/assets/     # seed для assets без url
-build/android-oem-hack/     # образы + assets/ + src/settings
+build/original/             # ISP-дамп: original.img|.dmg + partitions/ + filesystems/
+assets/logo/                # splash JPEG
+assets/ssh/                 # локально: q22e keys (.keep в git)
+build/android-oem-hack/     # образы + скачанные assets/
 build/ubuntu/               # Ubuntu chroot image
-firmware/ubuntu/            # legacy / промежуточные Ubuntu артефакты
-firmware/e2d/               # Debian e2d (legacy)
-firmware/flash/             # исходники e2d
-scripts/
-experiments/
+cmd/q22e/                   # CLI
+internal/{cli,config,oemhack,original,ubuntu}/
 docs/
 ```
 

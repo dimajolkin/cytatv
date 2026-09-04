@@ -11,6 +11,7 @@ type Config struct {
 	Ubuntu         Ubuntu
 	AndroidOemHack AndroidOemHack
 	Uart           Uart
+	Original       Original
 }
 
 // Load читает configs/*.yaml относительно root. Без ENV.
@@ -37,6 +38,12 @@ func Load(root string) (Config, error) {
 		return Config{}, err
 	}
 	cfg.Uart = uart
+
+	orig, err := loadOriginal(filepath.Join(root, "configs", "original.yaml"))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Original = orig
 
 	if err := cfg.resolve(); err != nil {
 		return Config{}, err
@@ -75,6 +82,14 @@ func (c *Config) resolve() error {
 	if c.Uart.LogDir != "" {
 		c.Uart.LogDir = Abs(r, c.Uart.LogDir)
 	}
+
+	c.Original.Dir = Abs(r, c.Original.Dir)
+	c.Original.XML = Abs(r, c.Original.XML)
+	if filepath.IsAbs(c.Original.Image) {
+		// keep
+	} else if c.Original.Image != "" {
+		// leave relative name; ImagePath() joins with Dir
+	}
 	return nil
 }
 
@@ -86,6 +101,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if err := c.Uart.Validate(); err != nil {
+		return err
+	}
+	if err := c.Original.Validate(); err != nil {
 		return err
 	}
 	return nil

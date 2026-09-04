@@ -32,7 +32,9 @@ go run ./cmd/q22e ubuntu flash -d diskN --force
 4. UI handoff (zygote off) только если `persist.cytatv.sdlinux.ui=1` (по умолчанию **нет**).
 
 ```bash
-ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>
+ssh -i assets/ssh/id_ed25519_q22e root@<IP>
+# ключи: go run ./cmd/q22e keys
+
 ```
 
 Отключить: `setprop persist.cytatv.sdlinux 0` + reboot.

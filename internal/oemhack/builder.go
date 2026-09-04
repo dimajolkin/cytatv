@@ -1,19 +1,18 @@
-package builder
+package oemhack
 
 import (
 	"fmt"
 	"path/filepath"
 
-	"cytatv/internal/builder/logo"
-	"cytatv/internal/builder/su"
 	"cytatv/internal/config"
-	"cytatv/internal/oemhack"
+	"cytatv/internal/oemhack/logo"
+	"cytatv/internal/oemhack/su"
 )
 
-func oemhackFromConfig(cfg config.Config) oemhack.Config {
+func pipelineFromConfig(cfg config.Config) Config {
 	a := cfg.AndroidOemHack
-	apps := append([]oemhack.SystemAppSpec(nil), a.SystemApps...)
-	return oemhack.Config{
+	apps := append([]config.SystemAppSpec(nil), a.SystemApps...)
+	return Config{
 		Root:                cfg.Root,
 		OutDir:              a.OutputDir,
 		AssetsDir:           a.AssetsDir,
@@ -32,8 +31,8 @@ func oemhackFromConfig(cfg config.Config) oemhack.Config {
 	}
 }
 
-// AndroidOemHack runs the Go oemhack pipeline.
-func AndroidOemHack(cfg config.Config) error {
+// Build — android-oem-hack build (su/logo + pipeline).
+func Build(cfg config.Config) error {
 	a := cfg.AndroidOemHack
 	if a.Su.Enabled {
 		if err := su.Build(a.Su); err != nil {
@@ -45,11 +44,11 @@ func AndroidOemHack(cfg config.Config) error {
 			return err
 		}
 	}
-	return oemhack.Run(oemhackFromConfig(cfg))
+	return Run(pipelineFromConfig(cfg))
 }
 
-// Settings builds system_apps from config.
+// Settings builds system_apps only.
 func Settings(cfg config.Config) error {
 	fmt.Println("=== system_apps →", cfg.AndroidOemHack.AssetsDir, "===")
-	return oemhack.BuildSystemApps(oemhackFromConfig(cfg))
+	return BuildSystemApps(pipelineFromConfig(cfg))
 }

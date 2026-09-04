@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Partition_Info>
+<Part Sel="0" PartitionName="fbl" FlashType="emmc" FileSystem="none" Start="0" Length="1M" SelectFile=""/>
+<Part Sel="0" PartitionName="fbldata" FlashType="emmc" FileSystem="none" Start="1M" Length="1M" SelectFile=""/>
+<Part Sel="0" PartitionName="trustedcore" FlashType="emmc" FileSystem="none" Start="2M" Length="16M" SelectFile=""/>
+<Part Sel="0" PartitionName="trustedcorebak" FlashType="emmc" FileSystem="none" Start="18M" Length="16M" SelectFile=""/>
+<Part Sel="0" PartitionName="fastboot" FlashType="emmc" FileSystem="none" Start="34M" Length="2M" SelectFile=""/>
+<Part Sel="0" PartitionName="sblbak" FlashType="emmc" FileSystem="none" Start="36M" Length="2M" SelectFile=""/>
+<Part Sel="0" PartitionName="bootargs" FlashType="emmc" FileSystem="none" Start="38M" Length="4M" SelectFile=""/>
+<Part Sel="0" PartitionName="recovery" FlashType="emmc" FileSystem="ext4" Start="42M" Length="30M" SelectFile=""/>
+<Part Sel="0" PartitionName="deviceinfo" FlashType="emmc" FileSystem="none" Start="72M" Length="1M" SelectFile=""/>
+<Part Sel="0" PartitionName="baseparam" FlashType="emmc" FileSystem="none" Start="73M" Length="4M" SelectFile=""/>
+<Part Sel="1" PartitionName="logo" FlashType="emmc" FileSystem="none" Start="77M" Length="16M" SelectFile="logo.img"/>
+<Part Sel="0" PartitionName="fastplay" FlashType="emmc" FileSystem="none" Start="93M" Length="16M" SelectFile=""/>
+<Part Sel="0" PartitionName="misc" FlashType="emmc" FileSystem="none" Start="109M" Length="8M" SelectFile=""/>
+<Part Sel="0" PartitionName="factory" FlashType="emmc" FileSystem="none" Start="117M" Length="24M" SelectFile=""/>
+<Part Sel="1" PartitionName="kernel" FlashType="emmc" FileSystem="none" Start="141M" Length="15M" SelectFile="kernel.img"/>
+<Part Sel="0" PartitionName="cadata" FlashType="emmc" FileSystem="none" Start="156M" Length="10M" SelectFile=""/>
+<Part Sel="0" PartitionName="securestore" FlashType="emmc" FileSystem="none" Start="166M" Length="10M" SelectFile=""/>
+<Part Sel="0" PartitionName="sysinfo" FlashType="emmc" FileSystem="none" Start="176M" Length="2M" SelectFile=""/>
+<Part Sel="0" PartitionName="appinfo" FlashType="emmc" FileSystem="none" Start="178M" Length="8M" SelectFile=""/>
+<Part Sel="0" PartitionName="backup" FlashType="emmc" FileSystem="ext4" Start="186M" Length="850M" SelectFile=""/>
+<Part Sel="0" PartitionName="cache" FlashType="emmc" FileSystem="ext4" Start="1036M" Length="850M" SelectFile=""/>
+<Part Sel="1" PartitionName="system" FlashType="emmc" FileSystem="ext4" Start="1886M" Length="1200M" SelectFile="system.img"/>
+<Part Sel="0" PartitionName="shatable" FlashType="emmc" FileSystem="none" Start="3086M" Length="50M" SelectFile=""/>
+<Part Sel="0" PartitionName="vendor" FlashType="emmc" FileSystem="ext4" Start="3136M" Length="200M" SelectFile=""/>
+<Part Sel="0" PartitionName="userdata" FlashType="emmc" FileSystem="ext4" Start="3336M" Length="512M" SelectFile=""/>
+</Partition_Info>

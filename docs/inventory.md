@@ -1,6 +1,6 @@
 # Inventory — Cyta STB Q22E
 
-Источники: `recovery-boot-log.txt` (2026-07-05), `boot-log.txt`, ISP-дамп `firmware/cyta/`.
+Источники: `recovery-boot-log.txt` (2026-07-05), `boot-log.txt`, ISP-дамп `build/original/`.
 
 ## Подтверждено
 
@@ -45,8 +45,8 @@
 | 24 | vendor | 200M | 3136M |
 | 25 | userdata | rest | 3336M |
 
-XML для инструментов: `firmware/custom/emmc_partitions_q22e.xml`.
+XML для инструментов: `configs/emmc_partitions_q22e.xml`.
 
 Для смены Android достаточно **logo + kernel + system**. Не прошивать `fbl` / `fastboot` / `trustedcore` без бэкапа.
 
-Дамп разделов: `firmware/cyta/extracted/partitions/`.
+Дамп разделов: `build/original/partitions/`.

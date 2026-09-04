@@ -16,8 +16,8 @@
 | Backup | [firmware-backup.md](firmware-backup.md) |
 | **Прошивка** | **[flash.md](flash.md)** |
 | ISP пины / оффсеты | [emmc-isp.md](emmc-isp.md) |
-| Linux e2d | [linux-install.md](linux-install.md) |
-| ADVCA / boot-эксперименты | [experiments/advca-boot/](../experiments/advca-boot/) |
+| Linux e2d (legacy) | [linux-install.md](linux-install.md) |
+| Ubuntu chroot | [ubuntu-chroot.md](ubuntu-chroot.md) |
 | Recovery | [recovery.md](recovery.md) |
 | macOS | [macos-setup.md](macos-setup.md) |
 | Фото | [photos/README.md](photos/README.md) |

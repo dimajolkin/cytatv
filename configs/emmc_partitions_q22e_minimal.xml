@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Partition_Info>
+<Part Sel="0" PartitionName="fastboot" FlashType="emmc" FileSystem="none" Start="0" Length="0" SelectFile=""/>
+<Part Sel="1" PartitionName="logo" FlashType="emmc" FileSystem="none" Start="77M" Length="16M" SelectFile="logo.img"/>
+<Part Sel="1" PartitionName="kernel" FlashType="emmc" FileSystem="none" Start="141M" Length="15M" SelectFile="kernel.img"/>
+<Part Sel="1" PartitionName="system" FlashType="emmc" FileSystem="ext4" Start="1886M" Length="1200M" SelectFile="system.img"/>
+</Partition_Info>

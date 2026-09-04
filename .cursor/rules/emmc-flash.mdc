@@ -36,4 +36,4 @@ sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force --build --verify
 
 Чип в плату → 12V → UART `go run ./cmd/q22e uart` → сеть/ADB/SSH.
 
-Доки: `docs/flash.md`, `docs/emmc-isp.md`. Откат: образы из `firmware/cyta/extracted/partitions/`.
+Доки: `docs/flash.md`, `docs/emmc-isp.md`. Откат: образы из `build/original/partitions/`.

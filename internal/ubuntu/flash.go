@@ -1,4 +1,4 @@
-package builder
+package ubuntu
 
 import (
 	"bufio"
@@ -13,8 +13,8 @@ import (
 
 var diskNameRE = regexp.MustCompile(`^disk[0-9]+$`)
 
-// UbuntuFlash пишет образ на SD/USB. imgOverride — аргумент CLI (пусто → cfg.Ubuntu.Output).
-func UbuntuFlash(cfg config.Config, imgOverride string) error {
+// Flash пишет образ на SD/USB. imgOverride — аргумент CLI (пусто → cfg.Ubuntu.Output).
+func Flash(cfg config.Config, imgOverride string) error {
 	img := imgOverride
 	if img == "" {
 		img = cfg.Ubuntu.Output
@@ -93,6 +93,14 @@ func UbuntuFlash(cfg config.Config, imgOverride string) error {
 	fmt.Println("Готово. Вставьте SD или USB (ehci) в STB до cold boot.")
 	fmt.Println("  → cytatv-sd-linux: SSH root@Debian :22 + Enigma2 (Android на eMMC).")
 	return nil
+}
+
+func humanSize(n int64) string {
+	const mb = 1024 * 1024
+	if n >= mb {
+		return fmt.Sprintf("%.1fM", float64(n)/float64(mb))
+	}
+	return fmt.Sprintf("%dB", n)
 }
 
 func assertSafeFlashDisk(disk string) error {

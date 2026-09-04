@@ -23,7 +23,7 @@
 
 ## Запись generic Android
 
-Источник образов: **`firmware/custom/`**. Оффсеты — из `emmc_partitions_q22e.xml` / [inventory.md](inventory.md):
+Источник образов: **`build/android-oem-hack/`**. Оффсеты — из `configs/emmc_partitions_q22e.xml` / [inventory.md](inventory.md):
 
 | Раздел | Offset | Length слота | Файл |
 |--------|--------|--------------|------|
@@ -48,13 +48,13 @@ go build -o eMMC153-Worker ./cmd/worker
 diskutil list   # Socket ~7.8 GB → rdiskN
 sudo ./eMMC153-Worker batch \
   --device /dev/rdiskN \
-  --android ~/Project/Github/cytatv/firmware/custom \
+  --android ~/Project/Github/cytatv/build/android-oem-hack \
   --verify
 ```
 
 CLI: `sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force`  
 Из агента/osascript raw `/dev/rdisk*` → часто `Operation not permitted`.
 
-Откат Cyta — те же оффсеты, файлы из `firmware/cyta/extracted/partitions/`.
+Откат Cyta — те же оффсеты, файлы из `build/original/partitions/`.
 
-Полный образ: `firmware/cyta/extracted/emmc_full.img` → целиком на чип.
+Полный образ: `build/original/original.img` (или `.dmg`) → целиком на чип.

@@ -13,7 +13,7 @@
 | MAC (наклейка) | `C4:B8:B4:8F:00:FC` |
 | MAC eth (live) | `C4:B8:B4:BF:AB:AB` |
 | IP (USB-Ethernet en9) | **`192.168.88.91`** (fixed DHCP) · Mac gateway `192.168.88.1` |
-| Firmware | custom (`firmware/custom`), ADB tcp `:5555` |
+| Firmware | android-oem-hack (`build/android-oem-hack/`), ADB tcp `:5555` |
 
 ## Ресурсы (подтверждено)
 
@@ -33,7 +33,7 @@
 | UART | boot log ✅ · shell / U-Boot ❌ |
 | ADB | custom: tcp `192.168.88.91:5555` (если adbd поднялся) |
 | HiTool burn | нужен TX→SoC ❌ |
-| ISP eMMC | **рабочий путь** ✅ · дамп в `firmware/cyta/` |
+| ISP eMMC | **рабочий путь** ✅ · дамп в `build/original/` |
 
 Прошивка: [flash.md](flash.md). UART: [uart.md](uart.md).
 

@@ -6,9 +6,11 @@ import (
 	"strings"
 )
 
-func stageWifiCalFirmware(b *Build) error {
-	calSrc := filepath.Join(b.Cfg.Root, "firmware", "cyta", "extracted", "filesystems", "userdata", "wifi", "cal", "wlan_eeprom.bin")
-	calHash := filepath.Join(b.Cfg.Root, "firmware", "cyta", "extracted", "filesystems", "userdata", "wifi", "cal", "binsha256")
+func stageWifiCalFirmware(b *Job) error {
+	// filesystems/system → sibling userdata
+	fsRoot := filepath.Dir(b.Cfg.FilesystemDir)
+	calSrc := filepath.Join(fsRoot, "userdata", "wifi", "cal", "wlan_eeprom.bin")
+	calHash := filepath.Join(fsRoot, "userdata", "wifi", "cal", "binsha256")
 
 	if _, err := os.Stat(calSrc); err == nil {
 		b.logf("wifi cal → /etc/wifi/cal")

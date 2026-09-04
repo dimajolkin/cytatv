@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func stageE2fsck(b *Build) error {
+func stageE2fsck(b *Job) error {
 	cmd := exec.Command(b.Cfg.E2fsck, "-fy", b.Img)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -17,7 +17,7 @@ func stageE2fsck(b *Build) error {
 	return nil
 }
 
-func stageManifest(b *Build) error {
+func stageManifest(b *Job) error {
 	if ls, err := b.Ls("/app"); err == nil {
 		b.logf("remaining /app:")
 		for _, line := range tokenizeLs(ls) {

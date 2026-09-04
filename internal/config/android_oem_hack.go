@@ -6,9 +6,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"cytatv/internal/builder/logo"
-	"cytatv/internal/builder/su"
-	"cytatv/internal/oemhack"
+	"cytatv/internal/oemhack/logo"
+	"cytatv/internal/oemhack/su"
 )
 
 // ServicesPatch — baksmali/smali services.jar.
@@ -20,18 +19,18 @@ type ServicesPatch struct {
 
 // AndroidOemHack — configs/android-oem-hack.yaml.
 type AndroidOemHack struct {
-	OutputDir     string                  `yaml:"output_dir"`
-	PartitionsDir string                  `yaml:"partitions_dir"`
-	FilesystemDir string                  `yaml:"filesystem_dir"`
-	AssetsDir     string                  `yaml:"assets_dir"`
-	SeedDir       string                  `yaml:"seed_dir"`
-	E2fsSbin      string                  `yaml:"e2fs_sbin"`
-	ServicesPatch ServicesPatch           `yaml:"services_patch"`
-	Su            su.Config               `yaml:"su"`
-	Logo          logo.Config             `yaml:"logo"`
-	SystemApps    []oemhack.SystemAppSpec `yaml:"system_apps"`
-	Assets        []oemhack.AssetSpec     `yaml:"assets"`
-	Flash         Flash                   `yaml:"flash"`
+	OutputDir     string          `yaml:"output_dir"`
+	PartitionsDir string          `yaml:"partitions_dir"`
+	FilesystemDir string          `yaml:"filesystem_dir"`
+	AssetsDir     string          `yaml:"assets_dir"`
+	SeedDir       string          `yaml:"seed_dir"`
+	E2fsSbin      string          `yaml:"e2fs_sbin"`
+	ServicesPatch ServicesPatch   `yaml:"services_patch"`
+	Su            su.Config       `yaml:"su"`
+	Logo          logo.Config     `yaml:"logo"`
+	SystemApps    []SystemAppSpec `yaml:"system_apps"`
+	Assets        []AssetSpec     `yaml:"assets"`
+	Flash         Flash           `yaml:"flash"`
 }
 
 func loadAndroidOemHack(path string) (AndroidOemHack, error) {
@@ -54,7 +53,6 @@ func (c AndroidOemHack) Validate() error {
 		{"android_oem_hack.partitions_dir", c.PartitionsDir},
 		{"android_oem_hack.filesystem_dir", c.FilesystemDir},
 		{"android_oem_hack.assets_dir", c.AssetsDir},
-		{"android_oem_hack.seed_dir", c.SeedDir},
 		{"android_oem_hack.e2fs_sbin", c.E2fsSbin},
 		{"android_oem_hack.services_patch.docker_image", c.ServicesPatch.DockerImage},
 		{"android_oem_hack.services_patch.work_dir", c.ServicesPatch.WorkDir},

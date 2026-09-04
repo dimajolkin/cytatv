@@ -1,6 +1,7 @@
 package oemhack
 
 import (
+	"cytatv/internal/config"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,7 +9,7 @@ import (
 )
 
 // EnsureRepo clones/updates app.Repo into app.SrcDir.
-func EnsureRepo(b *Build, app SystemAppSpec) (string, error) {
+func EnsureRepo(b *Job, app config.SystemAppSpec) (string, error) {
 	if app.Repo == "" || app.Ref == "" || app.SrcDir == "" {
 		return "", fmt.Errorf("system_apps[%s]: repo, ref, src_dir обязательны", app.ID)
 	}
@@ -75,7 +76,7 @@ func MakeAPK(srcDir, makeTarget, assetsDir string) error {
 	return cmd.Run()
 }
 
-func stageSystemApps(b *Build) error {
+func stageSystemApps(b *Job) error {
 	if len(b.Cfg.SystemApps) == 0 {
 		b.logf("system_apps: пусто — skip")
 		return nil
@@ -91,7 +92,7 @@ func stageSystemApps(b *Build) error {
 	return nil
 }
 
-func buildSystemApp(b *Build, app SystemAppSpec) error {
+func buildSystemApp(b *Job, app config.SystemAppSpec) error {
 	if app.ID == "" || app.APK == "" {
 		return fmt.Errorf("system_apps: id и apk обязательны")
 	}
@@ -119,7 +120,7 @@ func buildSystemApp(b *Build, app SystemAppSpec) error {
 
 // BuildSystemApps is used by CLI `q22e settings`.
 func BuildSystemApps(cfg Config) error {
-	b, err := NewBuild(cfg)
+	b, err := NewJob(cfg)
 	if err != nil {
 		return err
 	}

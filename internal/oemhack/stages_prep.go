@@ -6,31 +6,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
+
+	"cytatv/internal/config"
 )
 
-// AssetSpec describes one file needed by the pipeline (download / extract / seed).
-type AssetSpec struct {
-	Path       string        `yaml:"path"`
-	URL        string        `yaml:"url"`
-	Optional   bool          `yaml:"optional"`
-	Chmod      string        `yaml:"chmod"` // e.g. "0755"
-	RequireARM bool          `yaml:"require_arm"`
-	Extract    *ExtractSpec  `yaml:"extract"`
-}
-
-// ExtractSpec unpacks an archive URL into path (+ optional siblings).
-type ExtractSpec struct {
-	Member string          `yaml:"member"` // path inside archive → AssetSpec.Path
-	Also   []ExtractAlso   `yaml:"also"`
-}
-
-// ExtractAlso extracts an extra member to another path under assets_dir.
-type ExtractAlso struct {
-	Member string `yaml:"member"`
-	Path   string `yaml:"path"`
-}
-
-func stageValidate(b *Build) error {
+func stageValidate(b *Job) error {
 	if err := mustExist(b.Cfg.Debugfs); err != nil {
 		return fmt.Errorf("%w — brew install e2fsprogs", err)
 	}
@@ -43,7 +24,7 @@ func stageValidate(b *Build) error {
 	return nil
 }
 
-func stageFetchBins(b *Build) error {
+func stageFetchBins(b *Job) error {
 	if err := os.MkdirAll(b.Cfg.AssetsDir, 0o755); err != nil {
 		return err
 	}
@@ -63,35 +44,40 @@ func stageFetchBins(b *Build) error {
 	return nil
 }
 
-func (b *Build) ensureAsset(a *AssetSpec) error {
+func (b *Job) ensureAsset(a *config.AssetSpec) error {
 	dest := b.asset(a.Path)
 	if _, err := os.Stat(dest); err == nil {
 		return b.finalizeAsset(a, dest)
 	}
 
-	if a.URL != "" {
-		b.logf("download %s ← %s", a.Path, a.URL)
-		if a.Extract != nil {
-			if err := b.downloadExtract(a); err != nil {
-				return err
-			}
-		} else {
-			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-				return err
-			}
-			tmp := dest + ".partial"
-			if err := download(a.URL, tmp); err != nil {
-				_ = os.Remove(tmp)
-				return err
-			}
-			if err := os.Rename(tmp, dest); err != nil {
-				return err
-			}
+	if a.Extract != nil && (a.URL != "" || a.From != "") {
+		src := a.URL
+		if a.From != "" {
+			src = a.From
+		}
+		b.logf("extract %s ← %s", a.Path, src)
+		if err := b.downloadExtract(a); err != nil {
+			return err
 		}
 		return b.finalizeAsset(a, dest)
 	}
 
-	// seed from seed_dir
+	if a.URL != "" {
+		b.logf("download %s ← %s", a.Path, a.URL)
+		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			return err
+		}
+		tmp := dest + ".partial"
+		if err := download(a.URL, tmp); err != nil {
+			_ = os.Remove(tmp)
+			return err
+		}
+		if err := os.Rename(tmp, dest); err != nil {
+			return err
+		}
+		return b.finalizeAsset(a, dest)
+	}
+
 	if b.Cfg.SeedDir != "" {
 		seed := filepath.Join(b.Cfg.SeedDir, filepath.FromSlash(a.Path))
 		if _, err := os.Stat(seed); err == nil {
@@ -106,29 +92,42 @@ func (b *Build) ensureAsset(a *AssetSpec) error {
 		}
 	}
 
-	hint := "укажи url: в configs/android-oem-hack.yaml или положи файл в " + b.Cfg.AssetsDir
+	hint := "укажи url:/from: в configs/android-oem-hack.yaml или положи файл в " + b.Cfg.AssetsDir
 	if b.Cfg.SeedDir != "" {
 		hint += " / " + b.Cfg.SeedDir
 	}
 	return fmt.Errorf("нет %s — %s", dest, hint)
 }
 
-func (b *Build) downloadExtract(a *AssetSpec) error {
+func (b *Job) downloadExtract(a *config.AssetSpec) error {
 	dl := filepath.Join(b.Cfg.AssetsDir, ".dl")
 	if err := os.MkdirAll(dl, 0o755); err != nil {
 		return err
 	}
 	defer os.RemoveAll(dl)
 
-	archive := filepath.Join(dl, "archive"+extFromURL(a.URL))
-	if err := download(a.URL, archive); err != nil {
-		return err
-	}
-	if err := exec.Command("tar", "-xzf", archive, "-C", dl).Run(); err != nil {
-		return fmt.Errorf("tar extract %s: %w", a.URL, err)
+	var archive string
+	if a.From != "" {
+		archive = b.asset(a.From)
+		if _, err := os.Stat(archive); err != nil {
+			return fmt.Errorf("from %s: %w", a.From, err)
+		}
+	} else {
+		archive = filepath.Join(dl, "archive"+extFromURL(a.URL))
+		if err := download(a.URL, archive); err != nil {
+			return err
+		}
 	}
 
-	src := filepath.Join(dl, filepath.FromSlash(a.Extract.Member))
+	extractDir := filepath.Join(dl, "x")
+	if err := os.MkdirAll(extractDir, 0o755); err != nil {
+		return err
+	}
+	if err := extractArchive(archive, extractDir); err != nil {
+		return fmt.Errorf("extract %s: %w", archive, err)
+	}
+
+	src := filepath.Join(extractDir, filepath.FromSlash(a.Extract.Member))
 	dest := b.asset(a.Path)
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
@@ -137,7 +136,7 @@ func (b *Build) downloadExtract(a *AssetSpec) error {
 		return fmt.Errorf("extract %s: %w", a.Extract.Member, err)
 	}
 	for _, also := range a.Extract.Also {
-		asrc := filepath.Join(dl, filepath.FromSlash(also.Member))
+		asrc := filepath.Join(extractDir, filepath.FromSlash(also.Member))
 		adest := b.asset(also.Path)
 		if _, err := os.Stat(asrc); err != nil {
 			continue
@@ -145,12 +144,38 @@ func (b *Build) downloadExtract(a *AssetSpec) error {
 		if err := os.MkdirAll(filepath.Dir(adest), 0o755); err != nil {
 			return err
 		}
-		_ = copyFile(asrc, adest)
+		if err := copyFile(asrc, adest); err != nil {
+			return err
+		}
+		if a.Chmod != "" {
+			_ = b.finalizeAsset(&config.AssetSpec{Chmod: a.Chmod}, adest)
+		}
 	}
 	return nil
 }
 
-func (b *Build) finalizeAsset(a *AssetSpec, dest string) error {
+func extractArchive(archive, dest string) error {
+	ext := strings.ToLower(filepath.Ext(archive))
+	switch ext {
+	case ".zip", ".apk", ".jar":
+		cmd := exec.Command("unzip", "-qo", archive, "-d", dest)
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	case ".tgz", ".gz", ".tar":
+		cmd := exec.Command("tar", "-xzf", archive, "-C", dest)
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	default:
+		if err := exec.Command("unzip", "-qo", archive, "-d", dest).Run(); err == nil {
+			return nil
+		}
+		cmd := exec.Command("tar", "-xzf", archive, "-C", dest)
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	}
+}
+
+func (b *Job) finalizeAsset(a *config.AssetSpec, dest string) error {
 	if a.Chmod != "" {
 		mode, err := strconv.ParseUint(a.Chmod, 8, 32)
 		if err != nil {
@@ -175,13 +200,13 @@ func extFromURL(u string) string {
 }
 
 func download(url, dest string) error {
-	cmd := exec.Command("curl", "-fsSL", "-o", dest, url)
+	cmd := exec.Command("curl", "-fsSL", "-L", "-o", dest, url)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-func stageCopyImages(b *Build) error {
+func stageCopyImages(b *Job) error {
 	logoDst := filepath.Join(b.Cfg.OutDir, "logo.img")
 	if b.Cfg.InstallLogo {
 		neutral := b.asset("logo", "logo-neutral.img")

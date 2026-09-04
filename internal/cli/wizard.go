@@ -1,4 +1,4 @@
-package builder
+package cli
 
 import (
 	"bufio"
@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"cytatv/internal/config"
+	"cytatv/internal/oemhack"
+	"cytatv/internal/ubuntu"
 )
 
 func List(cfg config.Config) error {
@@ -65,24 +67,24 @@ func Wizard(cfg config.Config) error {
 	line = strings.TrimSpace(line)
 	switch line {
 	case "1", "ubuntu", "u", "ubuntu build":
-		return Ubuntu(cfg)
+		return ubuntu.Build(cfg)
 	case "2", "settings", "s":
-		return Settings(cfg)
+		return oemhack.Settings(cfg)
 	case "3", "android-oem-hack", "aoh", "aoh build":
-		return AndroidOemHack(cfg)
+		return oemhack.Build(cfg)
 	case "4", "sa", "settings+aoh":
-		if err := Settings(cfg); err != nil {
+		if err := oemhack.Settings(cfg); err != nil {
 			return err
 		}
-		return AndroidOemHack(cfg)
+		return oemhack.Build(cfg)
 	case "5", "all", "a":
-		if err := Ubuntu(cfg); err != nil {
+		if err := ubuntu.Build(cfg); err != nil {
 			return err
 		}
-		if err := Settings(cfg); err != nil {
+		if err := oemhack.Settings(cfg); err != nil {
 			return err
 		}
-		return AndroidOemHack(cfg)
+		return oemhack.Build(cfg)
 	case "6", "list", "l":
 		return List(cfg)
 	default:

@@ -7,7 +7,7 @@ import (
 // Stage is one named pipeline step.
 type Stage struct {
 	Name string
-	Run  func(*Build) error
+	Run  func(*Job) error
 }
 
 // DefaultStages returns the full android-oem-hack pipeline.
@@ -30,7 +30,7 @@ func DefaultStages() []Stage {
 
 // Run executes stages in order.
 func Run(cfg Config) error {
-	b, err := NewBuild(cfg)
+	b, err := NewJob(cfg)
 	if err != nil {
 		return err
 	}

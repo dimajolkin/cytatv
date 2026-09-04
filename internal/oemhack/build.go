@@ -7,22 +7,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-)
 
-// SystemAppSpec — приложение для system uid (обычно 1000), собираемое из repo.
-type SystemAppSpec struct {
-	ID          string `yaml:"id"`
-	UID         int    `yaml:"uid"`
-	APK         string `yaml:"apk"`
-	Guest       string `yaml:"guest"`
-	RemoveStock string `yaml:"remove_stock"`
-	SkipBuild   bool   `yaml:"skip_build"`
-	Pull        bool   `yaml:"pull"`
-	Repo        string `yaml:"repo"`
-	Ref         string `yaml:"ref"`
-	SrcDir      string `yaml:"src_dir"`
-	MakeTarget  string `yaml:"make_target"`
-}
+	"cytatv/internal/config"
+)
 
 // Config for android-oem-hack pipeline — все пути/значения задаются снаружи (yaml).
 type Config struct {
@@ -39,20 +26,20 @@ type Config struct {
 	ServicesAPI         int
 	InstallSu           bool // cytasu-daemon + su into system.img
 	InstallLogo         bool // HiSi splash (logo-neutral.img) вместо Cyta
-	SystemApps          []SystemAppSpec
-	Assets              []AssetSpec
+	SystemApps          []config.SystemAppSpec
+	Assets              []config.AssetSpec
 }
 
-// Build holds mutable pipeline state. Methods with Build receiver live in this file.
-type Build struct {
+// Job holds mutable pipeline state. Methods with Job receiver live in this file.
+type Job struct {
 	Cfg     Config
 	Img     string
 	WorkDir string
 	out     io.Writer
 }
 
-// NewBuild creates workdir. Required fields must already be set from config.
-func NewBuild(cfg Config) (*Build, error) {
+// NewJob creates workdir. Required fields must already be set from config.
+func NewJob(cfg Config) (*Job, error) {
 	if cfg.Root == "" {
 		return nil, fmt.Errorf("Root required")
 	}
@@ -61,7 +48,6 @@ func NewBuild(cfg Config) (*Build, error) {
 	}{
 		{"output_dir", cfg.OutDir},
 		{"assets_dir", cfg.AssetsDir},
-		{"seed_dir", cfg.SeedDir},
 		{"partitions_dir", cfg.PartitionsDir},
 		{"filesystem_dir", cfg.FilesystemDir},
 		{"debugfs", cfg.Debugfs},
@@ -82,7 +68,7 @@ func NewBuild(cfg Config) (*Build, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Build{
+	return &Job{
 		Cfg:     cfg,
 		Img:     filepath.Join(cfg.OutDir, "system.img"),
 		WorkDir: wd,
@@ -91,30 +77,30 @@ func NewBuild(cfg Config) (*Build, error) {
 }
 
 // Close removes the temp workdir.
-func (b *Build) Close() {
+func (b *Job) Close() {
 	if b.WorkDir != "" {
 		_ = os.RemoveAll(b.WorkDir)
 	}
 }
 
-func (b *Build) logf(format string, args ...any) {
+func (b *Job) logf(format string, args ...any) {
 	fmt.Fprintf(b.out, format+"\n", args...)
 }
 
-func (b *Build) work(name string) string {
+func (b *Job) work(name string) string {
 	return filepath.Join(b.WorkDir, name)
 }
 
-func (b *Build) asset(rel ...string) string {
+func (b *Job) asset(rel ...string) string {
 	return filepath.Join(append([]string{b.Cfg.AssetsDir}, rel...)...)
 }
 
-func (b *Build) part(name string) string {
+func (b *Job) part(name string) string {
 	return filepath.Join(b.Cfg.PartitionsDir, name)
 }
 
 // debugfsCmd runs debugfs; write=true adds -w.
-func (b *Build) debugfsCmd(write bool, request string) error {
+func (b *Job) debugfsCmd(write bool, request string) error {
 	args := []string{}
 	if write {
 		args = append(args, "-w")
@@ -127,7 +113,7 @@ func (b *Build) debugfsCmd(write bool, request string) error {
 }
 
 // debugfsFile runs debugfs -w -f commandsFile.
-func (b *Build) debugfsFile(commands string) error {
+func (b *Job) debugfsFile(commands string) error {
 	f, err := os.CreateTemp(b.WorkDir, "dfs-*.cmd")
 	if err != nil {
 		return err
@@ -147,37 +133,37 @@ func (b *Build) debugfsFile(commands string) error {
 }
 
 // Dump copies guest path to host file.
-func (b *Build) Dump(guest, host string) error {
+func (b *Job) Dump(guest, host string) error {
 	return b.debugfsCmd(false, fmt.Sprintf("dump %s %s", guest, host))
 }
 
 // Rm removes guest path (ignore errors).
-func (b *Build) Rm(guest string) {
+func (b *Job) Rm(guest string) {
 	_ = b.debugfsCmd(true, "rm "+guest)
 }
 
 // Rmdir removes guest directory (ignore errors).
-func (b *Build) Rmdir(guest string) {
+func (b *Job) Rmdir(guest string) {
 	_ = b.debugfsCmd(true, "rmdir "+guest)
 }
 
 // RmTree best-effort recursive remove via "rm -r".
-func (b *Build) RmTree(guest string) {
+func (b *Job) RmTree(guest string) {
 	_ = b.debugfsCmd(true, "rm -r "+guest)
 }
 
 // Mkdir creates guest directory (ignore errors).
-func (b *Build) Mkdir(guest string) {
+func (b *Job) Mkdir(guest string) {
 	_ = b.debugfsCmd(true, "mkdir "+guest)
 }
 
 // Stat checks guest path exists.
-func (b *Build) Stat(guest string) bool {
+func (b *Job) Stat(guest string) bool {
 	return b.debugfsCmd(false, "stat "+guest) == nil
 }
 
 // WriteBack writes host file into guest path; mode like "0100644" optional.
-func (b *Build) WriteBack(host, guest, mode string) error {
+func (b *Job) WriteBack(host, guest, mode string) error {
 	b.Rm(guest)
 	if err := b.debugfsCmd(true, fmt.Sprintf("write %s %s", host, guest)); err != nil {
 		return fmt.Errorf("write %s → %s: %w", host, guest, err)
@@ -189,14 +175,14 @@ func (b *Build) WriteBack(host, guest, mode string) error {
 }
 
 // Cat runs debugfs cat and returns output.
-func (b *Build) Cat(guest string) (string, error) {
+func (b *Job) Cat(guest string) (string, error) {
 	cmd := exec.Command(b.Cfg.Debugfs, "-R", "cat "+guest, b.Img)
 	out, err := cmd.Output()
 	return string(out), err
 }
 
 // Ls runs debugfs ls.
-func (b *Build) Ls(guest string) (string, error) {
+func (b *Job) Ls(guest string) (string, error) {
 	cmd := exec.Command(b.Cfg.Debugfs, "-R", "ls "+guest, b.Img)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -240,7 +226,7 @@ func fileIsARM(path string) bool {
 	return strings.Contains(string(out), "ARM")
 }
 
-func (b *Build) materializeScripts() error {
+func (b *Job) materializeScripts() error {
 	entries, err := scriptFS.ReadDir("scripts")
 	if err != nil {
 		return err
