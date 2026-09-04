@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Application>
+  <app packageName="system"><persist>true</persist></app>
+  <app packageName="system_server"><persist>true</persist></app>
+  <app packageName="com.android.systemui"><persist>true</persist></app>
+  <app packageName="com.android.settings"><persist>true</persist></app>
+  <app packageName="com.android.bluetooth"><persist>true</persist></app>
+  <app packageName="com.hisilicon.android.hiRMService"><persist>true</persist></app>
+  <app packageName="com.huawei.hmt.hmtNetworkService"><persist>true</persist></app>
+  <app packageName="com.huawei.hmt.stbbgservice"><persist>true</persist></app>
+  <app packageName="com.huawei.toast"><persist>true</persist></app>
+  <app packageName="ch.deletescape.lawnchair"><persist>true</persist></app>
+  <app packageName="com.topjohnwu.magisk"><persist>true</persist></app>
+</Application>

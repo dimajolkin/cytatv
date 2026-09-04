@@ -1,7 +1,9 @@
-# вся firmware локально
+# Build artifacts (images) — not source
+/build/
+
+# legacy firmware blobs (local)
 /firmware/
 
-# blob-типы на всякий случай
 *.img
 *.IMG
 *.upk
@@ -10,13 +12,10 @@
 *.tar.bz2
 *.tar.gz
 
-# приватные ключи
 **/id_ed25519
 **/id_ed25519_q22e
 
-# --- прочее ---
 docs/boot-log-*.txt
-scripts/emmc-isp-annotate/emmc-isp-annotate
 .DS_Store
 .idea/
 **/__pycache__/

@@ -7,15 +7,15 @@ Verified boot (ADVCA) не ломаем: родные `bootargs` / `kernel`.
 firmware/cyta/ (бэкап ✅)
         │
         ▼
-  ISP: firmware/custom (logo + kernel + system)
+  ISP: build/android-oem-hack (logo + kernel + system)
         │
         ▼
-  Custom Android + Magisk system-root + SSH/ADB
+  android-oem-hack + Magisk system-root + SSH/ADB
         │
         ├── без носителя: «чистый» Android
         │
         ▼
-  SD/USB e2d → cytatv-sd-linux.sh → Debian SSH :22 (root) + Enigma2
+  SD/USB Ubuntu → cytatv-sd-linux.sh → SSH :22 (root)
 ```
 
 ## 1. Бэкап
@@ -24,10 +24,10 @@ firmware/cyta/ (бэкап ✅)
 
 Перед любой записью: чип в сокете / полный образ сохранён.
 
-## 2. Custom Android (из Cyta, без IPTV)
+## 2. android-oem-hack (из Cyta, без IPTV)
 
-Файлы в **`firmware/custom/`** (сборка: `./scripts/build-custom-android.sh`).  
-По умолчанию `SETTINGS_SRC=custom` — перед образом собирается свежий Q22E Settings из `../q22e-android/settings-ui`.
+Артефакты в **`build/android-oem-hack/`** (`go run ./cmd/q22e android-oem-hack build`).  
+Ассеты: `build/android-oem-hack/assets/`. Settings — `go run ./cmd/q22e settings`.
 
 | Файл | Слот |
 |------|------|
@@ -36,11 +36,10 @@ firmware/cyta/ (бэкап ✅)
 | `system.img` | 1886M / 1200M (живой ext4, debloat + root + SD/USB Linux) |
 
 ```bash
-./scripts/build-custom-android.sh
-
-YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
-# или одной командой со свежей сборкой:
-# YES=1 BUILD=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
+go run ./cmd/q22e android-oem-hack build
+sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force
+# со сборкой заодно:
+# sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force --build --verify
 ```
 
 Или вручную:
@@ -49,7 +48,7 @@ YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh
 cd ../eMMC153-Writer && go build -o eMMC153-Worker ./cmd/worker
 sudo ./eMMC153-Worker batch \
   --device /dev/rdiskN \
-  --android ~/Project/Github/cytatv/firmware/custom \
+  --android ~/Project/Github/cytatv/build/android-oem-hack \
   --verify
 ```
 
@@ -69,7 +68,7 @@ sudo ./eMMC153-Worker batch \
 
 1. SD или USB с e2d вставлена (ehci для USB).
 2. Чип в плату → 12V.
-3. UART: `./scripts/uart-capture.sh`
+3. UART: `go run ./cmd/q22e uart`
    - `cytatv init.bigfish.sh` / hooks
    - при носителе: `sd-linux started` → `sshd ok :22 (root)` → `enigma2 ok|fail`
 4. Сеть → SSH в Debian: `ssh -i firmware/custom/assets/ssh/id_ed25519_q22e root@<IP>`

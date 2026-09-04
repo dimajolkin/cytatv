@@ -1,0 +1,16 @@
+on post-fs-data
+    mkdir /data/dropbear 0700 root root
+
+on property:sys.boot_completed=1
+    start dropbear
+
+service dropbear /system/xbin/dropbear.sh
+    user root
+    group root
+    disabled
+
+on property:persist.cytatv.ssh=1
+    start dropbear
+
+on property:persist.cytatv.ssh=0
+    stop dropbear

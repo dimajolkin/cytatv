@@ -1,0 +1,9 @@
+on property:sys.boot_completed=1
+    start cytatv_sd_linux
+
+service cytatv_sd_linux /system/xbin/cytatv-sd-linux.sh
+    class late_start
+    user root
+    group root
+    oneshot
+    disabled

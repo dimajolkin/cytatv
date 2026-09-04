@@ -44,7 +44,7 @@ rollback() {
   write_part "baseparam" "$CYTA/baseparam.img" "$OFF_BASEPARAM"
   write_part "kernel" "$CYTA/kernel.img" "$OFF_KERNEL"
   echo ""
-  echo "Rollback boot OK. system/logo — отдельно flash-custom-emmc.sh при необходимости."
+  echo "Rollback boot OK. system/logo — отдельно: q22e android-oem-hack flash"
 }
 
 need_cyta() {

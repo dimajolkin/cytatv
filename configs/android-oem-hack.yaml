@@ -1,0 +1,92 @@
+# Android OEM hack — патченый system с дампа Cyta
+
+output_dir: build/android-oem-hack
+partitions_dir: firmware/cyta/extracted/partitions
+filesystem_dir: firmware/cyta/extracted/filesystems/system
+assets_dir: build/android-oem-hack/assets
+seed_dir: firmware/custom/assets
+e2fs_sbin: /opt/homebrew/opt/e2fsprogs/sbin
+
+services_patch:
+  docker_image: cytatv-android:dev
+  work_dir: build/android-oem-hack/work/services
+  api: 24
+
+# cytasu root (ADVCA) — часть android-oem-hack
+su:
+  enabled: true
+  ndk: /Users/dimajolkin/Library/Android/sdk/ndk/28.2.13676358
+  api: 21
+  host_tag: darwin-x86_64
+  target: armv7a-linux-androideabi
+
+# HiSi splash (JPEG → logo.img), часть android-oem-hack
+logo:
+  enabled: true
+  jpeg: firmware/custom/assets/logo/neutral.jpg
+  size_mib: 16
+
+flash:
+  disk: ""
+  force: false
+  verify: false
+  build: false
+  wipe_userdata: true
+
+# Приложения системного пользователя (uid=1000). Пока один вариант — из git repo.
+system_apps:
+  - id: settings
+    uid: 1000
+    apk: Settings.apk
+    guest: /priv-app/Settings/Settings.apk
+    remove_stock: /app/Settings
+    skip_build: false
+    pull: false
+    repo: git@github.com:dimajolkin/q22e-android-settings.git
+    ref: main
+    src_dir: build/android-oem-hack/src/q22e-android-settings
+    make_target: apk-for-firmware
+
+# Файлы для pipeline: скачивание в assets_dir, затем install*
+# path — относительно assets_dir
+assets:
+  - path: Lawnchair.apk
+  - path: Magisk.apk
+  - path: magisk-arm/cytasu-daemon
+    optional: true # собирается при su.enabled
+  - path: magisk-arm/su
+    optional: true
+  - path: magisk-arm/magisk
+  - path: magisk-arm/magiskpolicy
+  - path: magisk-arm/busybox
+  - path: dropbear-arm/dropbear
+  - path: dropbear-arm/dropbearkey
+  - path: dropbear-arm/scp
+  - path: ssh/authorized_keys
+  - path: extras/TermOnePlus.apk
+  - path: extras/WifiAnalyzer.apk
+  - path: extras/Game2048.apk
+  - path: extras/Amaze.apk
+  - path: extras/Lightning.apk
+  - path: extras/WifiHub.apk
+  - path: logo/logo-neutral.img
+    optional: true # собирается при logo.enabled
+  - path: adb/adb_keys
+    optional: true
+  - path: services.jar
+    optional: true
+  - path: Settings.apk
+    optional: true
+  - path: bash-arm/bash
+    url: https://raw.githubusercontent.com/Inknyto/arm-binaries/main/bash.tgz
+    chmod: "0755"
+    require_arm: true
+    extract:
+      member: system/xbin/bash
+      also:
+        - member: system/etc/inputrc
+          path: bash-arm/inputrc
+  - path: adbd-arm/adbd
+    url: https://raw.githubusercontent.com/Inknyto/arm-binaries/main/adbd-non-root
+    chmod: "0755"
+    require_arm: true

@@ -1,0 +1,28 @@
+on early-boot
+    write /proc/sys/kernel/printk "7 4 1 7"
+
+on property:init.svc.logd=running
+    start uart_logcat
+    start uart_crash
+
+on property:sys.boot_completed=1
+    start uart_logcat
+    start uart_crash
+
+service uart_logcat /system/xbin/uart-logcat.sh
+    user root
+    group root system log
+    oneshot
+    disabled
+
+service uart_crash /system/xbin/uart-crash.sh
+    user root
+    group root system log
+    oneshot
+    disabled
+
+on property:init.svc.uart_logcat=stopped
+    start uart_logcat
+
+on property:init.svc.uart_crash=stopped
+    start uart_crash

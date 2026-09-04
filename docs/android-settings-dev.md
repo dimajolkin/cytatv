@@ -6,6 +6,5 @@
 Временный Kotlin UI в `settings-ui` — прототип экранов ADB/SSH.
 
 ```bash
-cd ~/Project/Github/q22e-android/settings-ui && make apk-for-firmware
-cd ~/Project/Github/cytatv && ./scripts/build-custom-android.sh
+cd ~/Project/Github/cytatv && go run ./cmd/q22e settings && go run ./cmd/q22e android-oem-hack build
 ```

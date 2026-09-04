@@ -44,8 +44,9 @@ Pad 3–4 (с трасами) — почти наверняка TX/RX.
 ## Захват лога (macOS)
 
 ```bash
-./scripts/uart-capture.sh
-# или: screen /dev/cu.usbserial-XXXX 115200
+go run ./cmd/q22e uart
+# или: go run ./cmd/q22e uart /dev/cu.usbserial-XXXX
+# Ctrl+C — стоп и сохранить docs/boot-log-*.txt
 ```
 
 В log искать: `mem=`, `blkdevparts=`, `MMC`/`eMMC`.

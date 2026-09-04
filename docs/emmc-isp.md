@@ -52,33 +52,9 @@ sudo ./eMMC153-Worker batch \
   --verify
 ```
 
-Обёртка: `YES=1 DISK=diskN sudo -E ./scripts/flash-custom-emmc.sh`  
+CLI: `sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force`  
 Из агента/osascript raw `/dev/rdisk*` → часто `Operation not permitted`.
 
 Откат Cyta — те же оффсеты, файлы из `firmware/cyta/extracted/partitions/`.
 
 Полный образ: `firmware/cyta/extracted/emmc_full.img` → целиком на чип.
-
-## Разметка фото (Go)
-
-Сетка сокета **14×14** (JEDEC / программатор).
-
-**GUI:**
-
-```bash
-cd scripts/emmc-isp-annotate
-go run ./cmd/ui
-```
-
-**CLI:**
-
-```bash
-cd scripts/emmc-isp-annotate
-go run ./cmd/annotate \
-  -in ../../docs/photos/14-emmc-footprint-closeup.png \
-  -roi 240,240,400,400 \
-  -bw ../../docs/photos/22-emmc-bw-mask.png \
-  -out ../../docs/photos/22-emmc153-isp-go.png
-```
-
-Результат: [`photos/22-emmc153-isp-go.png`](photos/22-emmc153-isp-go.png).
