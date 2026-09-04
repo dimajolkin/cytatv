@@ -37,7 +37,8 @@ func Ubuntu(cfg config.Config) error {
 	fmt.Println("SHA256 OK")
 
 	fmt.Println("=== docker build q22e-ubuntu-builder ===")
-	if err := run(cfg.Root, "docker", "build", "-t", "q22e-ubuntu-builder", filepath.Join(cfg.Root, "ubuntu")); err != nil {
+	ctx := filepath.Join(cfg.Root, "internal", "ubuntu")
+	if err := run(cfg.Root, "docker", "build", "-t", "q22e-ubuntu-builder", ctx); err != nil {
 		return err
 	}
 

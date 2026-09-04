@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// Root finds repo root (directory with go.mod + ubuntu/).
+// Root finds repo root (directory with go.mod + configs/).
 func Root() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -14,12 +14,12 @@ func Root() (string, error) {
 	}
 	dir := wd
 	for {
-		if fileExists(filepath.Join(dir, "go.mod")) && dirExists(filepath.Join(dir, "ubuntu")) {
+		if fileExists(filepath.Join(dir, "go.mod")) && dirExists(filepath.Join(dir, "configs")) {
 			return dir, nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("repo root not found (need go.mod + ubuntu/)")
+			return "", fmt.Errorf("repo root not found (need go.mod + configs/)")
 		}
 		dir = parent
 	}
