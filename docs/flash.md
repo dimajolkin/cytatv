@@ -27,7 +27,7 @@ build/original/ (бэкап, `q22e init`)
 ## 2. android-oem-hack (из Cyta, без IPTV)
 
 Артефакты в **`build/android-oem-hack/`** (`go run ./cmd/q22e android-oem-hack build`).  
-Ассеты: `build/android-oem-hack/assets/`. Settings — `make apk-for-firmware` в `q22e-android-settings`.
+Ассеты: `build/android-oem-hack/assets/`. Settings — `make apk-for-firmware` в `q22e-android-settings` (`Settings.apk` → `file://` в yaml).
 
 | Файл | Слот |
 |------|------|

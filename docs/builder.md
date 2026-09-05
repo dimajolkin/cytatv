@@ -27,11 +27,19 @@ system_apps:
     remove_stock: /app/Settings
 ```
 
-Settings собирается в sibling **q22e-android-settings**:
+Settings собирается в sibling **q22e-android-settings** → `Settings.apk` (gitignore),
+cytatv подтягивает через assets:
+
+```yaml
+  - path: Settings.apk
+    url: file://../q22e-android-settings/Settings.apk
+```
 
 ```bash
 cd ../q22e-android-settings && make apk-for-firmware
 ```
+
+`file://` относительно корня cytatv; при каждом build assets переписывается.
 
 `assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`).
 

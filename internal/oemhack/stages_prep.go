@@ -46,8 +46,12 @@ func stageFetchBins(b *Job) error {
 
 func (b *Job) ensureAsset(a *config.AssetSpec) error {
 	dest := b.asset(a.Path)
-	if _, err := os.Stat(dest); err == nil {
-		return b.finalizeAsset(a, dest)
+	fileURL := strings.HasPrefix(a.URL, "file://")
+	// file:// всегда перечитываем — локальный артефакт мог обновиться.
+	if !fileURL {
+		if _, err := os.Stat(dest); err == nil {
+			return b.finalizeAsset(a, dest)
+		}
 	}
 
 	if a.Extract != nil && (a.URL != "" || a.From != "") {
@@ -68,7 +72,7 @@ func (b *Job) ensureAsset(a *config.AssetSpec) error {
 			return err
 		}
 		tmp := dest + ".partial"
-		if err := download(a.URL, tmp); err != nil {
+		if err := b.fetchURL(a.URL, tmp); err != nil {
 			_ = os.Remove(tmp)
 			return err
 		}
@@ -114,7 +118,7 @@ func (b *Job) downloadExtract(a *config.AssetSpec) error {
 		}
 	} else {
 		archive = filepath.Join(dl, "archive"+extFromURL(a.URL))
-		if err := download(a.URL, archive); err != nil {
+		if err := downloadHTTP(a.URL, archive); err != nil {
 			return err
 		}
 	}
@@ -199,7 +203,42 @@ func extFromURL(u string) string {
 	return ".bin"
 }
 
-func download(url, dest string) error {
+// resolveFileURL maps file://… to a host path.
+// Absolute: file:///Users/… → /Users/…
+// Relative to root: file://../q22e-android-settings/Settings.apk
+func resolveFileURL(root, u string) (string, error) {
+	const prefix = "file://"
+	if !strings.HasPrefix(u, prefix) {
+		return "", fmt.Errorf("не file:// URL: %s", u)
+	}
+	p := strings.TrimPrefix(u, prefix)
+	if p == "" {
+		return "", fmt.Errorf("пустой file:// URL")
+	}
+	if strings.HasPrefix(p, "/") {
+		return filepath.Clean(p), nil
+	}
+	if root == "" {
+		return "", fmt.Errorf("file:// относиный путь без root: %s", u)
+	}
+	return filepath.Clean(filepath.Join(root, filepath.FromSlash(p))), nil
+}
+
+func (b *Job) fetchURL(url, dest string) error {
+	if strings.HasPrefix(url, "file://") {
+		src, err := resolveFileURL(b.Cfg.Root, url)
+		if err != nil {
+			return err
+		}
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("file:// %s: %w", src, err)
+		}
+		return copyFile(src, dest)
+	}
+	return downloadHTTP(url, dest)
+}
+
+func downloadHTTP(url, dest string) error {
 	cmd := exec.Command("curl", "-fsSL", "-L", "-o", dest, url)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

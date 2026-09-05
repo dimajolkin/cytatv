@@ -34,8 +34,7 @@ flash:
   wipe_userdata: true
 
 # Приложения системного пользователя (uid=1000).
-# Settings.apk собирается в ../q22e-android-settings (`make apk-for-firmware`),
-# сюда кладётся готовый файл — без gradle из cytatv.
+# Settings.apk: make apk-for-firmware в ../q22e-android-settings → assets через file://.
 system_apps:
   - id: settings
     uid: 1000
@@ -156,7 +155,7 @@ assets:
   - path: services.jar
     optional: true
   - path: Settings.apk
-    optional: true
+    url: file://../q22e-android-settings/Settings.apk
 
   - path: bash-arm/bash
     url: https://raw.githubusercontent.com/Inknyto/arm-binaries/main/bash.tgz
