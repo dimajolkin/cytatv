@@ -39,7 +39,7 @@ go run ./cmd/q22e uart
 # с Ubuntu SD/USB → SSH :22 в Ubuntu (root)
 ```
 
-CLI: `init` · `keys` · `settings` · `android-oem-hack` · `ubuntu` · `uart` · `list` · `wizard`
+CLI: `init` · `keys` · `android-oem-hack` · `ubuntu` · `uart` · `list` · `wizard`
 
 ## Документация
 

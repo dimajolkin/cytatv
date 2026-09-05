@@ -17,7 +17,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:           "q22e",
 		Short:         "Q22E firmware build CLI",
-		Long:          "Сборка Ubuntu chroot, Settings и android-oem-hack для Huawei Q22E (Hi3798CV200).",
+		Long:          "Сборка Ubuntu chroot и android-oem-hack для Huawei Q22E (Hi3798CV200).",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -27,7 +27,6 @@ func main() {
 		initCmd(),
 		keysCmd(),
 		ubuntuCmd(),
-		cmd("settings", []string{"s"}, "system_apps из конфига (repo → apk)", oemhack.Settings),
 		androidOemHackCmd(),
 		cmd("list", []string{"ls", "l"}, "Показать артефакты в build/", cli.List),
 		uartCmd(),

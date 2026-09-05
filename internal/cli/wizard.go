@@ -39,7 +39,7 @@ func List(cfg config.Config) error {
 		fmt.Printf("  --  assets/Settings.apk\n")
 	}
 	if !any {
-		fmt.Println("(пусто — go run ./cmd/q22e ubuntu build | settings | android-oem-hack build)")
+		fmt.Println("(пусто — make apk-for-firmware в q22e-android-settings; go run ./cmd/q22e ubuntu|android-oem-hack build)")
 	}
 	return nil
 }
@@ -57,35 +57,23 @@ func Wizard(cfg config.Config) error {
 	in := bufio.NewReader(os.Stdin)
 	fmt.Println("q22e builder — что собрать?")
 	fmt.Println("  1) ubuntu build      — Ubuntu Base chroot image")
-	fmt.Println("  2) settings          — system_apps (uid=1000) из конфига")
-	fmt.Println("  3) android-oem-hack  — build патченого OEM Android")
-	fmt.Println("  4) settings + aoh build")
-	fmt.Println("  5) all               — ubuntu build + settings + aoh build")
-	fmt.Println("  6) list")
+	fmt.Println("  2) android-oem-hack  — build патченого OEM Android")
+	fmt.Println("  3) all               — ubuntu + android-oem-hack")
+	fmt.Println("  4) list")
 	fmt.Print("> ")
 	line, _ := in.ReadString('\n')
 	line = strings.TrimSpace(line)
 	switch line {
 	case "1", "ubuntu", "u", "ubuntu build":
 		return ubuntu.Build(cfg)
-	case "2", "settings", "s":
-		return oemhack.Settings(cfg)
-	case "3", "android-oem-hack", "aoh", "aoh build":
+	case "2", "android-oem-hack", "aoh", "aoh build":
 		return oemhack.Build(cfg)
-	case "4", "sa", "settings+aoh":
-		if err := oemhack.Settings(cfg); err != nil {
-			return err
-		}
-		return oemhack.Build(cfg)
-	case "5", "all", "a":
+	case "3", "all", "a":
 		if err := ubuntu.Build(cfg); err != nil {
 			return err
 		}
-		if err := oemhack.Settings(cfg); err != nil {
-			return err
-		}
 		return oemhack.Build(cfg)
-	case "6", "list", "l":
+	case "4", "list", "l":
 		return List(cfg)
 	default:
 		return fmt.Errorf("unknown choice %q", line)

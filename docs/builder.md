@@ -4,7 +4,6 @@
 go run ./cmd/q22e wizard
 go run ./cmd/q22e ubuntu build
 go run ./cmd/q22e ubuntu flash -d diskN --force
-go run ./cmd/q22e settings
 go run ./cmd/q22e android-oem-hack build
 go run ./cmd/q22e android-oem-hack test   # system.img ↔ yaml (debugfs)
 go run ./cmd/q22e android-oem-hack flash -d diskN --force
@@ -17,7 +16,7 @@ go run ./cmd/q22e uart
 
 ## android-oem-hack — system_apps
 
-Приложения system uid (сейчас `uid: 1000`), сборка из git:
+Приложения system uid (сейчас `uid: 1000`). Готовый APK в `assets_dir` — без сборки из cytatv:
 
 ```yaml
 system_apps:
@@ -26,14 +25,13 @@ system_apps:
     apk: Settings.apk
     guest: /priv-app/Settings/Settings.apk
     remove_stock: /app/Settings
-    repo: git@github.com:dimajolkin/q22e-android-settings.git
-    ref: main
-    src_dir: ../q22e-android-settings
-    make_target: apk-for-firmware
 ```
 
-Рабочий код Settings: репозиторий **q22e-android-settings** (sibling к cytatv).
-`go run ./cmd/q22e settings` собирает APK из `src_dir`.
+Settings собирается в sibling **q22e-android-settings**:
+
+```bash
+cd ../q22e-android-settings && make apk-for-firmware
+```
 
 `assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`).
 

@@ -1,6 +1,7 @@
 package config
 
-// SystemAppSpec — приложение для system uid (обычно 1000), собираемое из repo.
+// SystemAppSpec — приложение для system uid (обычно 1000).
+// Готовый APK в assets_dir; опционально repo/make для локальной сборки.
 type SystemAppSpec struct {
 	ID          string `yaml:"id"`
 	UID         int    `yaml:"uid"`

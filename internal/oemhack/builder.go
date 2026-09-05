@@ -1,7 +1,6 @@
 package oemhack
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"cytatv/internal/config"
@@ -50,10 +49,4 @@ func Build(cfg config.Config) error {
 		}
 	}
 	return Run(pipelineFromConfig(cfg))
-}
-
-// Settings builds system_apps only.
-func Settings(cfg config.Config) error {
-	fmt.Println("=== system_apps →", cfg.AndroidOemHack.AssetsDir, "===")
-	return BuildSystemApps(pipelineFromConfig(cfg))
 }
