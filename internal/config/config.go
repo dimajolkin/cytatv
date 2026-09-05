@@ -14,7 +14,8 @@ type Config struct {
 	Original       Original
 }
 
-// Load читает configs/*.yaml относительно root. Без ENV.
+// Load читает configs/*.yaml относительно root.
+// android-oem-hack.yaml мержится с опциональным android-oem-hack.local.yaml.
 func Load(root string) (Config, error) {
 	if root == "" {
 		return Config{}, fmt.Errorf("root обязателен")
