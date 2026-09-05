@@ -9,13 +9,10 @@ import (
 
 func stageInstallApps(b *Job) error {
 	mode644 := "0100644"
+	// старые лаунчеры (OpenLauncher / Lawnchair) — HOME теперь Settings
 	b.RmTree("/priv-app/OpenLauncher")
-	b.Rm("/priv-app/OpenLauncher/OpenLauncher.apk")
-	b.Mkdir("/priv-app/Lawnchair")
+	b.RmTree("/priv-app/Lawnchair")
 	b.Mkdir("/priv-app/Magisk")
-	if err := b.WriteBack(b.asset("Lawnchair.apk"), "/priv-app/Lawnchair/Lawnchair.apk", mode644); err != nil {
-		return err
-	}
 	if err := b.WriteBack(b.asset("Magisk.apk"), "/priv-app/Magisk/Magisk.apk", mode644); err != nil {
 		return err
 	}

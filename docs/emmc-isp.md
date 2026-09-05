@@ -52,7 +52,7 @@ sudo ./eMMC153-Worker batch \
   --verify
 ```
 
-CLI: `sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force`  
+CLI: `go run ./cmd/q22e android-oem-hack flash -d diskN --force` (sudo в процессе)  
 Из агента/osascript raw `/dev/rdisk*` → часто `Operation not permitted`.
 
 Откат Cyta — те же оффсеты, файлы из `build/original/partitions/`.

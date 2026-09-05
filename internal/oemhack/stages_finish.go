@@ -25,7 +25,7 @@ func stageManifest(b *Job) error {
 		}
 	}
 	for _, p := range []string{
-		"/priv-app/Lawnchair", "/priv-app/Magisk", "/priv-app/Settings",
+		"/priv-app/Magisk", "/priv-app/Settings",
 		"/app/TermOnePlus", "/app/WifiAnalyzer", "/app/Amaze",
 		"/app/Game2048", "/app/Lightning", "/app/WifiHub",
 		"/etc/dropbear",
@@ -66,11 +66,11 @@ func stageManifest(b *Job) error {
 	for _, a := range b.Cfg.SystemApps {
 		appIDs = append(appIDs, fmt.Sprintf("%s(uid=%d)", a.ID, a.UID))
 	}
-	manifest := fmt.Sprintf(`android-oem-hack: Cyta dump, IPTV removed, Lawnchair HOME, cytasu root, Magisk app, dropbear :22, SD Linux chroot
+	manifest := fmt.Sprintf(`android-oem-hack: Cyta dump, IPTV removed, Settings HOME, cytasu root, Magisk app, dropbear :22, SD Linux chroot
 logo   %d
 kernel %d
 system %d
-launcher: ch.deletescape.lawnchair (Lawnchair 1.2.0)
+launcher: com.android.settings (Q22E Settings = HOME)
 system_apps: %s + services.jar compareSignatures mock
 apps: TermOnePlus, WifiAnalyzer, Amaze, 2048, Lightning, WifiHub (Wi‑Fi)
 root: cytasu-daemon + /system/xbin/su (ADVCA — без Magisk boot-patch)
@@ -79,7 +79,7 @@ ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e
 adb: tcp :5555 (/system/xbin/adbd + adbd-watch)
 uart: logcat I + crashes → ttyAMA0
 wifi: MT7662T cal+firmware; persist.cytatv.wifi.enable=1
-sd-linux: cytatv-sd-linux.sh — persist.cytatv.sdlinux=1
+sd-linux: cytatv-sd-linux.sh — persist.cytatv.sdlinux=1; UI auto on USB
 rebuild: go run ./cmd/q22e android-oem-hack build
 `, logoSz, kernSz, sysSz, strings.Join(appIDs, ", "))
 	return os.WriteFile(filepath.Join(b.Cfg.OutDir, "MANIFEST.txt"), []byte(manifest), 0o644)

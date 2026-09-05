@@ -37,9 +37,9 @@ build/original/ (бэкап, `q22e init`)
 
 ```bash
 go run ./cmd/q22e android-oem-hack build
-sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force
-# со сборкой заодно:
-# sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force --build --verify
+go run ./cmd/q22e android-oem-hack flash -d diskN --force
+# sudo запросится в процессе (как ubuntu flash); со сборкой:
+# go run ./cmd/q22e android-oem-hack flash -d diskN --force --build --verify
 ```
 
 Или вручную:

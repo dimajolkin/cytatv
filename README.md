@@ -10,7 +10,7 @@ TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, cu
 | UART | ✅ boot log @ 115200, **только чтение** |
 | Прошивка | ✅ **ISP eMMC** ([docs/flash.md](docs/flash.md)) |
 | Backup | ✅ `build/original/` (`q22e init`) |
-| Custom Android | Lawnchair, cytasu, Q22E Settings, Magisk, SSH, ADB tcp → `android-oem-hack` |
+| Custom Android | Settings=HOME, cytasu, Magisk, SSH, ADB tcp → `android-oem-hack` |
 | Linux | Ubuntu Base armhf chroot — [ubuntu-chroot.md](docs/ubuntu-chroot.md) |
 
 MENU / `.upk` / синяя кнопка на этой Cyta **недоступны** (ADVCA).
@@ -26,8 +26,8 @@ go run ./cmd/q22e keys
 
 # 1) android-oem-hack → Socket
 go run ./cmd/q22e android-oem-hack build
-sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force --verify
-# diskN = Socket ~7.8G, Terminal.app + sudo + Full Disk Access
+go run ./cmd/q22e android-oem-hack flash -d diskN --force --verify
+# diskN = Socket ~7.8G; sudo в процессе; Terminal.app + Full Disk Access
 
 # 2) Ubuntu на SD/USB (опционально)
 go run ./cmd/q22e ubuntu build

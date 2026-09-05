@@ -46,7 +46,7 @@ Pad 3–4 (с трасами) — почти наверняка TX/RX.
 ```bash
 go run ./cmd/q22e uart
 # или: go run ./cmd/q22e uart /dev/cu.usbserial-XXXX
-# Ctrl+C — стоп и сохранить docs/boot-log-*.txt
+# Ctrl+C — стоп и сохранить logs/boot-log-*.txt
 ```
 
 В log искать: `mem=`, `blkdevparts=`, `MMC`/`eMMC`.

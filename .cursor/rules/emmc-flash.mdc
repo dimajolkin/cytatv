@@ -14,9 +14,9 @@ alwaysApply: true
 ```bash
 cd ~/Project/Github/cytatv
 go run ./cmd/q22e android-oem-hack build
-sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force --verify
-# или одной командой:
-sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force --build --verify
+go run ./cmd/q22e android-oem-hack flash -d diskN --force --verify
+# sudo запросится в процессе (как ubuntu flash); или одной командой:
+go run ./cmd/q22e android-oem-hack flash -d diskN --force --build --verify
 ```
 
 Пакет: `github.com/dimajolkin/eMMC153-Writer` (`replace ../eMMC153-Writer`). Worker CLI больше не нужен для q22e.

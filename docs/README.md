@@ -27,6 +27,6 @@
 
 | Файл | |
 |------|--|
-| [boot-log.txt](boot-log.txt) | UART boot |
+| [`logs/boot-log.txt`](../logs/boot-log.txt) | UART boot (живой захват) |
 | [recovery-boot-log.txt](recovery-boot-log.txt) | recovery + `blkdevparts` |
 | [network-probe.txt](network-probe.txt) | probe сети |

@@ -1,5 +1,6 @@
 #!/system/bin/sh
-# Mount Ubuntu/Debian rootfs (SD/USB) → chroot: SSH :22. UI handoff only if prop.
+# Mount Ubuntu/Debian rootfs (SD/USB) → chroot: SSH :22.
+# UI handoff: auto on USB flash; on SD only if persist.cytatv.sdlinux.ui=1.
 T=/dev/ttyAMA0
 [ -c "$T" ] || T=/dev/console
 log() { echo "cytatv: sd-linux $*" >>"$T" 2>/dev/null; }
@@ -43,6 +44,13 @@ try_linux() {
 }
 
 find_linux() {
+  # USB first: flash stick wins over SD when both present
+  for c in \
+    /dev/block/sda1 /dev/block/sda /dev/sda1 /dev/sda \
+    /dev/block/sdb1 /dev/block/sdb /dev/sdb1 /dev/sdb
+  do
+    try_linux "$c" usb && return 0
+  done
   for c in \
     /dev/block/mmcblk1p1 /dev/block/mmcblk1 \
     /dev/mmcblk1p1 /dev/mmcblk1 \
@@ -50,17 +58,12 @@ find_linux() {
   do
     try_linux "$c" sd && return 0
   done
-  for c in \
-    /dev/block/sda1 /dev/block/sda /dev/sda1 /dev/sda \
-    /dev/block/sdb1 /dev/block/sdb /dev/sdb1 /dev/sdb
-  do
-    try_linux "$c" usb && return 0
-  done
-  for c in /dev/block/platform/*/by-name/* /dev/block/sd[a-z] /dev/block/sd[a-z][0-9] \
-           /dev/block/mmcblk1 /dev/block/mmcblk1p1; do
+  for c in /dev/block/sd[a-z] /dev/block/sd[a-z][0-9] \
+           /dev/block/mmcblk1 /dev/block/mmcblk1p1 \
+           /dev/block/platform/*/by-name/*; do
     case "$c" in
-      *mmcblk1*) try_linux "$c" sd && return 0 ;;
       *sd[a-z]*) try_linux "$c" usb && return 0 ;;
+      *mmcblk1*) try_linux "$c" sd && return 0 ;;
     esac
   done
   return 1
@@ -144,8 +147,19 @@ stop_android_ssh
   fi
 ) &
 
-# Optional: kill Android UI (default OFF — was black screen with broken rootfs)
-case "$(getprop persist.cytatv.sdlinux.ui)" in
+# UI handoff: USB flash → auto; SD → only if prop set (or force-off with =0)
+UI="$(getprop persist.cytatv.sdlinux.ui)"
+if [ "$KIND" = "usb" ]; then
+  case "$UI" in
+    0|false|no) ;;
+    *)
+      UI=1
+      setprop persist.cytatv.sdlinux.ui 1
+      log "ui auto-set (usb)"
+      ;;
+  esac
+fi
+case "$UI" in
   1|true|yes)
     (
       sleep 3
@@ -156,7 +170,7 @@ case "$(getprop persist.cytatv.sdlinux.ui)" in
     ) &
     ;;
   *)
-    log "ui keep Android (set persist.cytatv.sdlinux.ui=1 to handoff)"
+    log "ui keep Android (usb flash → auto; or set persist.cytatv.sdlinux.ui=1)"
     ;;
 esac
 

@@ -29,7 +29,8 @@ go run ./cmd/q22e uart
 
 ```bash
 go run ./cmd/q22e android-oem-hack build
-sudo go run ./cmd/q22e android-oem-hack flash -d diskN --force
+go run ./cmd/q22e android-oem-hack flash -d diskN --force
+# sudo запросится в процессе (как ubuntu flash)
 go run ./cmd/q22e ubuntu build
 go run ./cmd/q22e ubuntu flash -d diskM --force
 ```

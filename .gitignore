@@ -16,6 +16,9 @@
 **/id_ed25519
 **/id_ed25519_q22e
 
+# UART capture (q22e uart)
+/logs/*
+!/logs/.gitkeep
 docs/boot-log-*.txt
 .DS_Store
 .idea/

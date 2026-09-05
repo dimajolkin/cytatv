@@ -26,10 +26,10 @@ go run ./cmd/q22e ubuntu flash -d diskN --force
 
 После `sys.boot_completed` (prop `persist.cytatv.sdlinux=1`):
 
-1. SD (`mmcblk1`) или USB (`sda`) с `/etc/debian_version` / Ubuntu.
+1. USB (`sda`) или SD (`mmcblk1`) с `/etc/debian_version` / Ubuntu (USB в приоритете).
 2. Smoke: `chroot /bin/sh` — иначе Android UI **не** гасится.
 3. SSH Debian/Ubuntu `:22` (Android dropbear останавливается).
-4. UI handoff (zygote off) только если `persist.cytatv.sdlinux.ui=1` (по умолчанию **нет**).
+4. UI handoff (zygote off): **авто** если rootfs на USB-флешке; на SD — только при `persist.cytatv.sdlinux.ui=1`. Отключить даже на USB: `setprop persist.cytatv.sdlinux.ui 0`.
 
 ```bash
 ssh -i assets/ssh/id_ed25519_q22e root@<IP>

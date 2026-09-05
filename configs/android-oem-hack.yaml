@@ -50,9 +50,6 @@ system_apps:
 # Файлы для pipeline: скачивание в assets_dir, затем install*
 # path — относительно assets_dir; from — архив уже в assets_dir
 assets:
-  - path: Lawnchair.apk
-    url: https://github.com/LawnchairLauncher/lawnchair/releases/download/1.2.0.1884/Lawnchair-1.2.0.1884.apk
-
   - path: Magisk.apk
     url: https://github.com/topjohnwu/Magisk/releases/download/v25.2/Magisk-v25.2.apk
 

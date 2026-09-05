@@ -36,7 +36,6 @@ func TestFetchAssetsFromURLs(t *testing.T) {
 	}
 
 	for _, p := range []string{
-		"Lawnchair.apk",
 		"Magisk.apk",
 		"magisk-arm/magisk",
 		"magisk-arm/magiskpolicy",

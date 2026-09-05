@@ -64,7 +64,7 @@ func stagePatchPropsAndScripts(b *Job) error {
 		"ro.total.flash":                "8G",
 		"ro.build.type":                 "userdebug",
 		"ro.build.tags":                 "test-keys",
-		"ro.oem_preferred_pkg":          "ch.deletescape.lawnchair",
+		"ro.oem_preferred_pkg":          "com.android.settings",
 	} {
 		bp = setProp(bp, k, v)
 	}
@@ -86,7 +86,7 @@ func stagePatchPropsAndScripts(b *Job) error {
 		hw = delProp(hw, "ro.product.stb.vmxTaVersion")
 		for k, v := range map[string]string{
 			"ro.hw.sys.net.add.iptvroute": "0",
-			"ro.hw.sys.default.launcher":  "ch.deletescape.lawnchair",
+			"ro.hw.sys.default.launcher":  "com.android.settings",
 			"ro.hw.sys.boot.haswizard":    "0",
 			"ro.hw.sys.net.dhcp.opt60":    "0",
 			"ro.hw.sys.net.dhcp.opt61":    "0",

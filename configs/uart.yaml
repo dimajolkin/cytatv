@@ -1,4 +1,4 @@
 # UART capture (q22e uart)
 port: ""
 baud: 115200
-log_dir: docs
+log_dir: logs

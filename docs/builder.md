@@ -40,7 +40,7 @@ system_apps:
 `logo.enabled` — JPEG → HiSi `logo.img` (иначе Cyta splash).
 
 ```bash
-go run ./cmd/q22e uart              # USB-UART → docs/boot-log-*.txt, Ctrl+C стоп
+go run ./cmd/q22e uart              # USB-UART → logs/boot-log-*.txt, Ctrl+C стоп
 go run ./cmd/q22e uart /dev/cu.… -b 115200
 ```
 

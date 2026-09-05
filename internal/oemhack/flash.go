@@ -4,19 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	emmc "github.com/dimajolkin/eMMC153-Writer"
 
 	"cytatv/internal/config"
+	"cytatv/internal/flash"
 )
-
-var diskNameRE = regexp.MustCompile(`^disk[0-9]+$`)
 
 // Flash — ISP Socket → logo+kernel+system (+userdata wipe).
 func Flash(cfg config.Config) error {
-	flash := cfg.AndroidOemHack.Flash
-	if flash.Build {
+	opts := cfg.AndroidOemHack.Flash
+	if opts.Build {
 		fmt.Println("=== flash.build → android-oem-hack build ===")
 		if err := Build(cfg); err != nil {
 			return err
@@ -35,35 +33,30 @@ func Flash(cfg config.Config) error {
 	}
 
 	fmt.Println("=== диски (Socket ~7.8G) ===")
-	devs, err := emmc.ListExternalDevices()
-	if err != nil {
+	if err := flash.PrintCandidates(); err != nil {
 		fmt.Printf("WARN: list devices: %v\n", err)
-	} else {
-		for _, d := range devs {
-			fmt.Printf("  %s\n", d.Label())
-		}
 	}
 	fmt.Println()
 
-	disk := flash.Disk
+	disk := opts.Disk
 	var device emmc.Device
+	devs, _ := emmc.ListExternalDevices()
 	if disk == "" {
+		var err error
 		device, err = emmc.FindSocketDevice()
 		if err != nil {
 			return fmt.Errorf("%w — укажи flash.disk или --disk diskN", err)
 		}
 		disk = device.ID
+		fmt.Printf("Авто: %s\n", device.Label())
 	} else {
-		if !diskNameRE.MatchString(disk) {
-			return fmt.Errorf("формат diskN, получено %q", disk)
-		}
-		if disk == "disk0" {
-			return fmt.Errorf("disk0 запрещён")
+		if err := flash.ValidateName(disk); err != nil {
+			return err
 		}
 		device = emmc.Device{
 			ID:      disk,
-			Node:    "/dev/" + disk,
-			RawNode: "/dev/r" + disk,
+			Node:    flash.DevPath(disk),
+			RawNode: flash.RawPath(disk),
 		}
 		for _, d := range devs {
 			if d.ID == disk {
@@ -73,23 +66,32 @@ func Flash(cfg config.Config) error {
 		}
 	}
 
-	fmt.Printf("Цель: %s  media=%q\n", device.RawNode, device.Name)
-	fmt.Printf("Android: %s\n", android)
-	if device.Name != "" && device.Name != "Socket" && !flash.Force {
-		return fmt.Errorf("не Socket (media=%q) — flash.force: true или --force", device.Name)
+	if err := flash.AssertSafe(disk); err != nil {
+		return err
 	}
 
-	if os.Geteuid() != 0 {
-		return fmt.Errorf("нужен root: sudo go run ./cmd/q22e android-oem-hack flash -d %s --force\n(из Terminal.app с Full Disk Access)", disk)
+	fmt.Printf("Цель: %s  media=%q\n", device.RawNode, device.Name)
+	fmt.Printf("Android: %s\n", android)
+	if device.Name != "" && device.Name != "Socket" && !opts.Force {
+		return fmt.Errorf("не Socket (media=%q) — flash.force: true или --force", device.Name)
+	}
+	fmt.Println("Будет записано — разделы logo/kernel/system (+userdata wipe)!")
+	if err := flash.ConfirmYes("Подтвердите (yes): ", opts.Force); err != nil {
+		return err
+	}
+
+	// Как ubuntu dd: sudo запрашивается здесь, не требует запуска всей команды от root.
+	if err := flash.Elevate([]string{"-d", disk, "--force"}, []string{"--build"}); err != nil {
+		return err
 	}
 
 	fmt.Println()
 	fmt.Println("=== eMMC153 BatchAndroid ===")
-	err = emmc.BatchAndroid(emmc.AndroidBatch{
+	err := emmc.BatchAndroid(emmc.AndroidBatch{
 		DevicePath:   device.RawNode,
 		AndroidDir:   android,
-		Verify:       flash.Verify,
-		WipeUserdata: flash.WipeUserdata,
+		Verify:       opts.Verify,
+		WipeUserdata: opts.WipeUserdata,
 	}, func(p emmc.Progress) {
 		if p.Message != "" {
 			fmt.Fprintf(os.Stderr, "[%s] %.1f%% %s\n", p.Phase, p.Percent, p.Message)

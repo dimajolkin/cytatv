@@ -9,6 +9,5 @@
   <app packageName="com.huawei.hmt.hmtNetworkService"><persist>true</persist></app>
   <app packageName="com.huawei.hmt.stbbgservice"><persist>true</persist></app>
   <app packageName="com.huawei.toast"><persist>true</persist></app>
-  <app packageName="ch.deletescape.lawnchair"><persist>true</persist></app>
   <app packageName="com.topjohnwu.magisk"><persist>true</persist></app>
 </Application>

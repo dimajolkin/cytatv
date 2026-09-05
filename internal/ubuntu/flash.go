@@ -1,17 +1,13 @@
 package ubuntu
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
-	"strings"
 
 	"cytatv/internal/config"
+	"cytatv/internal/flash"
 )
-
-var diskNameRE = regexp.MustCompile(`^disk[0-9]+$`)
 
 // Flash пишет образ на SD/USB. imgOverride — аргумент CLI (пусто → cfg.Ubuntu.Output).
 func Flash(cfg config.Config, imgOverride string) error {
@@ -34,61 +30,33 @@ func Flash(cfg config.Config, imgOverride string) error {
 	}
 	fmt.Println("=== Запись Ubuntu chroot на SD/USB ===")
 	fmt.Printf("Образ: %s (%s)\n\n", img, humanSize(st.Size()))
-	fmt.Println("Доступные диски:")
-	_ = run("", "sh", "-c", "diskutil list | grep -E '^/dev/disk|external|#:' || true")
+	if err := flash.PrintCandidates(); err != nil {
+		return err
+	}
 	fmt.Println()
 
-	flash := cfg.Ubuntu.Flash
-	disk := flash.Disk
-	force := flash.Force
-
-	in := bufio.NewReader(os.Stdin)
-	if disk == "" {
-		fmt.Print("Введите diskN (например disk4, БЕЗ r): ")
-		line, _ := in.ReadString('\n')
-		disk = strings.TrimSpace(line)
-	} else if !force {
-		fmt.Printf("Подтвердите запись на %s (yes): ", disk)
-		line, _ := in.ReadString('\n')
-		if strings.TrimSpace(line) != "yes" {
-			return fmt.Errorf("отменено")
-		}
-	}
-
-	if !diskNameRE.MatchString(disk) {
-		return fmt.Errorf("неверный формат: %q (ожидается diskN)", disk)
-	}
-	if err := assertSafeFlashDisk(disk); err != nil {
+	opts := cfg.Ubuntu.Flash
+	disk, err := flash.ResolveDisk(opts.Disk, opts.Force)
+	if err != nil {
 		return err
 	}
 
-	info, _ := exec.Command("diskutil", "info", "/dev/"+disk).CombinedOutput()
-	media := awkField(string(info), "Device / Media Name")
-	proto := awkField(string(info), "Protocol")
-	fmt.Printf("Цель: /dev/%s  media=%q protocol=%q\n", disk, media, proto)
+	media, proto, _ := flash.Info(disk)
+	fmt.Printf("Цель: %s  media=%q protocol=%q\n", flash.DevPath(disk), media, proto)
 	fmt.Println("Будет записано — все данные на этом диске уничтожены!")
-
-	if !force {
-		fmt.Print("Подтвердите (yes): ")
-		line, _ := in.ReadString('\n')
-		if strings.TrimSpace(line) != "yes" {
-			return fmt.Errorf("отменено")
-		}
+	if err := flash.ConfirmYes("Подтвердите (yes): ", opts.Force); err != nil {
+		return err
 	}
 
-	_ = exec.Command("diskutil", "unmountDisk", "/dev/"+disk).Run()
+	flash.UnmountDisk(disk)
 
-	rdev := "/dev/r" + disk
+	rdev := flash.RawPath(disk)
 	fmt.Printf("dd → %s …\n", rdev)
-	dd := exec.Command("sudo", "dd", "if="+img, "of="+rdev, "bs=4m", "status=progress")
-	dd.Stdout = os.Stdout
-	dd.Stderr = os.Stderr
-	dd.Stdin = os.Stdin
-	if err := dd.Run(); err != nil {
-		return fmt.Errorf("dd: %w", err)
+	if err := flash.Sudo("dd", "if="+img, "of="+rdev, "bs=4m", "status=progress"); err != nil {
+		return err
 	}
 	_ = exec.Command("sync").Run()
-	_ = exec.Command("diskutil", "eject", "/dev/"+disk).Run()
+	flash.Eject(disk)
 
 	fmt.Println("Готово. Вставьте SD или USB (ehci) в STB до cold boot.")
 	fmt.Println("  → cytatv-sd-linux: SSH root@Debian :22 + Enigma2 (Android на eMMC).")
@@ -101,57 +69,4 @@ func humanSize(n int64) string {
 		return fmt.Sprintf("%.1fM", float64(n)/float64(mb))
 	}
 	return fmt.Sprintf("%dB", n)
-}
-
-func assertSafeFlashDisk(disk string) error {
-	if disk == "disk0" {
-		return fmt.Errorf("отказ: disk0 — системный диск")
-	}
-	out, err := exec.Command("diskutil", "info", "/dev/"+disk).CombinedOutput()
-	info := string(out)
-	if err != nil {
-		return fmt.Errorf("diskutil info /dev/%s: %w", disk, err)
-	}
-	lower := strings.ToLower(info)
-	if strings.Contains(lower, "protocol:") && strings.Contains(lower, "apple fabric") {
-		return fmt.Errorf("отказ: системный диск Mac (Apple Fabric)")
-	}
-	if strings.Contains(lower, "media name:") && strings.Contains(lower, "apple ssd") {
-		return fmt.Errorf("отказ: системный диск Mac (APPLE SSD)")
-	}
-	internal := strings.Contains(lower, "device location:") && strings.Contains(lower, "internal")
-	if internal {
-		media := strings.ToLower(awkField(info, "Device / Media Name") + " " + awkField(info, "Protocol"))
-		ok := strings.Contains(media, "secure digital") ||
-			strings.Contains(media, "sdxc") ||
-			strings.Contains(media, "sd card") ||
-			strings.Contains(media, "card reader")
-		if !ok {
-			return fmt.Errorf("отказ: внутренний диск (не SD-ридер):\n%s", summarizeDiskInfo(info))
-		}
-	}
-	return nil
-}
-
-func awkField(info, key string) string {
-	for _, line := range strings.Split(info, "\n") {
-		if !strings.Contains(line, key) {
-			continue
-		}
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) == 2 {
-			return strings.TrimSpace(parts[1])
-		}
-	}
-	return ""
-}
-
-func summarizeDiskInfo(info string) string {
-	var lines []string
-	for _, key := range []string{"Device Node", "Device / Media Name", "Protocol", "Device Location"} {
-		if v := awkField(info, key); v != "" {
-			lines = append(lines, "  "+key+": "+v)
-		}
-	}
-	return strings.Join(lines, "\n")
 }
