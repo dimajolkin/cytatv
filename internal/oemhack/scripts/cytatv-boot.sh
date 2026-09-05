@@ -9,25 +9,65 @@ echo 0 > /sys/fs/selinux/enforce 2>/dev/null
 [ -x /system/xbin/cytatv-fix-uid.sh ] && /system/xbin/cytatv-fix-uid.sh
 echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
 
-# --- root check (Magisk /system/xbin/su) ---
+# --- root gate: q22esu + su must work, иначе STOP zygote ---
 (
-  sleep 8
-  echo "=== cytatv root-check ===" >>"$T" 2>/dev/null
+  echo "=== q22e root-check ===" >>"$T" 2>/dev/null
+  mkdir -p /data/adb/magisk /data/local/tmp 2>/dev/null
   SU=/system/xbin/su
   [ -x "$SU" ] || SU=/system/bin/su
-  if [ ! -x "$SU" ] && [ ! -x /system/xbin/magisk ]; then
-    echo "cytatv: root FAIL (no su/magisk)" >>"$T" 2>/dev/null
-    exit 0
+
+  if [ ! -x "$SU" ] || [ ! -x /system/xbin/q22esu-daemon ]; then
+    echo "q22e: ========================================" >>"$T" 2>/dev/null
+    echo "q22e: FATAL no su/q22esu-daemon on system" >>"$T" 2>/dev/null
+    echo "q22e: STOP zygote (no root)" >>"$T" 2>/dev/null
+    echo "q22e: ========================================" >>"$T" 2>/dev/null
+    setprop q22e.root.ok 0
+    sleep 1
+    stop zygote
+    stop
+    exit 1
   fi
-  [ -x /system/xbin/magisk ] && /system/xbin/magisk --daemon >/dev/null 2>&1
-  ID0=$("$SU" 0 -c id 2>/dev/null)
-  ID1=$("$SU" 1000 -c id 2>/dev/null)
-  echo "cytatv: su0=$ID0" >>"$T" 2>/dev/null
-  echo "cytatv: su1000=$ID1" >>"$T" 2>/dev/null
-  echo "$ID0" | grep -q 'uid=0' && echo "cytatv: root OK (uid 0)" >>"$T" 2>/dev/null \
-    || echo "cytatv: root FAIL (su 0)" >>"$T" 2>/dev/null
-  echo "$ID1" | grep -q 'uid=1000' && echo "cytatv: system OK (uid 1000)" >>"$T" 2>/dev/null \
-    || echo "cytatv: system FAIL (su 1000)" >>"$T" 2>/dev/null
+
+  ensure_su_daemon() {
+    [ -S /dev/q22esu.sock ] && pidof q22esu-daemon >/dev/null 2>&1 && return 0
+    setprop ctl.start q22esu_daemon 2>/dev/null || true
+    if ! pidof q22esu-daemon >/dev/null 2>&1; then
+      /system/xbin/q22esu-daemon >/dev/null 2>&1 &
+    fi
+    [ -x /system/xbin/magisk ] && /system/xbin/magisk --daemon >/dev/null 2>&1
+  }
+
+  i=0
+  ID0=
+  ID1=
+  while [ "$i" -lt 60 ]; do
+    ensure_su_daemon
+    ID0=$("$SU" 0 -c id 2>/dev/null)
+    ID1=$("$SU" 1000 -c id 2>/dev/null)
+    echo "$ID0" | grep -q 'uid=0' && echo "$ID1" | grep -q 'uid=1000' && break
+    i=$((i + 1))
+    sleep 1
+  done
+
+  echo "q22e: su0=$ID0" >>"$T" 2>/dev/null
+  echo "q22e: su1000=$ID1" >>"$T" 2>/dev/null
+
+  if ! echo "$ID0" | grep -q 'uid=0' || ! echo "$ID1" | grep -q 'uid=1000'; then
+    echo "q22e: ========================================" >>"$T" 2>/dev/null
+    echo "q22e: FATAL root not ready (su 0 / su 1000)" >>"$T" 2>/dev/null
+    echo "q22e: sock=$( [ -S /dev/q22esu.sock ] && echo yes || echo no ) daemon=$(pidof q22esu-daemon)" >>"$T" 2>/dev/null
+    echo "q22e: STOP zygote (boot broken on purpose)" >>"$T" 2>/dev/null
+    echo "q22e: ========================================" >>"$T" 2>/dev/null
+    setprop q22e.root.ok 0
+    sleep 1
+    stop zygote
+    stop
+    exit 1
+  fi
+
+  echo "q22e: root OK (uid 0)" >>"$T" 2>/dev/null
+  echo "q22e: system OK (uid 1000)" >>"$T" 2>/dev/null
+  setprop q22e.root.ok 1
 ) &
 
 [ -x /system/xbin/uart-logcat.sh ] && /system/xbin/uart-logcat.sh &
@@ -44,11 +84,6 @@ echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
     sleep 5
   done
   echo "cytatv: adbd after boot pid=$(pidof adbd) listen5555=$(grep -c ':15B3 ' /proc/net/tcp /proc/net/tcp6 2>/dev/null | tr '\n' '+')" >>"$T" 2>/dev/null
-) &
-
-(
-  mkdir -p /data/adb/magisk 2>/dev/null
-  [ -x /system/xbin/magisk ] && /system/xbin/magisk --daemon &
 ) &
 
 (
@@ -105,7 +140,7 @@ echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
     echo "cytatv: STOP zygote (boot broken on purpose)" >>"$T" 2>/dev/null
     echo "cytatv: ========================================" >>"$T" 2>/dev/null
     echo "uid=$UID_S xml=$XML_LINE" >"$FAIL_FLAG"
-    setprop cytatv.settings.uid_ok 0
+    setprop q22e.settings.uid_ok 0
     sleep 1
     stop zygote
     stop
@@ -113,7 +148,7 @@ echo "cytatv: fix-uid exit=$?" >>"$T" 2>/dev/null
   fi
 
   echo "cytatv: Settings UID OK (1000)" >>"$T" 2>/dev/null
-  setprop cytatv.settings.uid_ok 1
+  setprop q22e.settings.uid_ok 1
   rm -f "$FAIL_FLAG" "$REBOOT_FLAG" 2>/dev/null
 
   for P in \

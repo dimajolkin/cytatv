@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # -F: foreground — иначе fork + oneshot → init.svc.dropbear=stopped при живом демоне
-case "$(getprop persist.cytatv.ssh)" in
+case "$(getprop persist.q22e.ssh)" in
   0) exit 0 ;;
 esac
 export HOME=/data/dropbear

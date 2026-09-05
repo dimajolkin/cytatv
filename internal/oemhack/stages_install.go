@@ -98,7 +98,7 @@ func stageInstallRootTools(b *Job) error {
 	}
 	if b.Cfg.InstallSu {
 		writes = append(writes,
-			struct{ host, guest string }{b.asset("magisk-arm", "cytasu-daemon"), "/xbin/cytasu-daemon"},
+			struct{ host, guest string }{b.asset("magisk-arm", "q22esu-daemon"), "/xbin/q22esu-daemon"},
 			struct{ host, guest string }{b.asset("magisk-arm", "su"), "/xbin/su"},
 			struct{ host, guest string }{b.asset("magisk-arm", "su"), "/bin/su"},
 		)

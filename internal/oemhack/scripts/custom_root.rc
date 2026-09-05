@@ -6,7 +6,7 @@ on post-fs-data
     mkdir /data/adb/magisk 0755 root root
     mkdir /data/local/tmp 0777 root root
     start cytatv_fix_uid
-    start cytasu_daemon
+    start q22esu_daemon
     start magisk_daemon
 
 service cytatv_fix_uid /system/xbin/cytatv-fix-uid.sh
@@ -15,7 +15,7 @@ service cytatv_fix_uid /system/xbin/cytatv-fix-uid.sh
     oneshot
     disabled
 
-service cytasu_daemon /system/xbin/cytasu-daemon
+service q22esu_daemon /system/xbin/q22esu-daemon
     user root
     group root
 
@@ -27,5 +27,5 @@ service magisk_daemon /system/xbin/magisk --daemon
 
 on property:sys.boot_completed=1
     write /sys/fs/selinux/enforce 0
-    start cytasu_daemon
+    start q22esu_daemon
     start magisk_daemon

@@ -24,13 +24,14 @@ type Config struct {
 	ServicesDockerImage string
 	ServicesWorkDir     string
 	ServicesAPI         int
-	InstallSu           bool // cytasu-daemon + su into system.img
+	InstallSu           bool // q22esu-daemon + su into system.img
 	InstallLogo         bool // HiSi splash (logo-neutral.img) вместо Cyta
 	SystemApps          []config.SystemAppSpec
 	InstallApps         []config.InstallAppSpec
 	Launcher            config.LauncherSpec
 	ReserveApps         []string
 	Assets              []config.AssetSpec
+	Wifi                config.Wifi
 }
 
 // Job holds mutable pipeline state. Methods with Job receiver live in this file.

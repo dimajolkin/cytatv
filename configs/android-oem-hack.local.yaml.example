@@ -6,3 +6,9 @@ flash:
   disk: disk4
   force: true
   verify: true
+
+# Дефолтный Wi‑Fi после wipe userdata (Settings сидит из /system/etc/wifi/cytatv_default.conf).
+wifi:
+  ssid: YourSSID
+  psk: "YourPassword"
+  # key_mgmt: WPA-PSK   # или NONE для открытой сети

@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#define SOCK_PATH "/dev/cytasu.sock"
+#define SOCK_PATH "/dev/q22esu.sock"
 #define MAX_CMD 8192
 
 static void handle(int fd) {

@@ -63,7 +63,7 @@ go run ./cmd/q22e uart
 
 Хук: `init.bigfish.sh` + `logd.rc` (Android 7 не всегда читает `custom_uart.rc`).
 
-Уровень: `persist.cytatv.uart.loglevel` (по умолчанию **`V`** — всё).  
+Уровень: `persist.q22e.uart.loglevel` (по умолчанию **`V`** — всё).  
 Тише: `I` или `D` (через `adb shell setprop …` после сети, либо пересборка).
 
 RX по-прежнему может не работать на железе Q22E. В прошивке включён эксперимент **`uart-shell.sh`**: читает команды с `/dev/ttyAMA0`, выполняет через `sh -c`, ответ → UART.
@@ -76,7 +76,7 @@ reboot
 exit          — выйти из shell-цикла
 ```
 
-Отключить: `setprop persist.cytatv.uart.shell 0` (после ADB) или пересборка с `0` в build.prop.
+Отключить: `setprop persist.q22e.uart.shell 0` (после ADB) или пересборка с `0` в build.prop.
 
 В **picocom** можно печатать команды — если RX жив, увидишь `#` prompt и вывод.
 

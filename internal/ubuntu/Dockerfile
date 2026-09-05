@@ -9,8 +9,8 @@ RUN apt-get update -qq \
       ca-certificates openssh-client \
  && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/mkimage.sh /usr/local/bin/cyta-mkimage
-RUN chmod +x /usr/local/bin/cyta-mkimage
+COPY scripts/mkimage.sh /usr/local/bin/q22e-mkimage
+RUN chmod +x /usr/local/bin/q22e-mkimage
 
 WORKDIR /work
-ENTRYPOINT ["/usr/local/bin/cyta-mkimage"]
+ENTRYPOINT ["/usr/local/bin/q22e-mkimage"]

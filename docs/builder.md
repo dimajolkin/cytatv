@@ -42,6 +42,17 @@ cd ../q22e-android-settings && make apk-for-firmware
 
 `file://` относительно корня cytatv; при каждом build assets переписывается.
 
+## wifi (обычно в `.local.yaml`)
+
+```yaml
+wifi:
+  ssid: HomeNet
+  psk: "secret"
+```
+
+При build пишется `/system/etc/wifi/cytatv_default.conf`; Settings на BOOT_COMPLETED
+подключается один раз (после wipe userdata).
+
 `assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`).
 
 `install_apps[]` — APK из assets → путь в `system.img` (`guest`, опционально `replace`, `optional`).
@@ -56,7 +67,7 @@ cd ../q22e-android-settings && make apk-for-firmware
 
 `services_patch` — Docker baksmali/smali для `services.jar` (мок compareSignatures).
 
-`su.enabled` — собрать и поставить cytasu (NDK) в образ.
+`su.enabled` — собрать и поставить q22esu (NDK) в образ.
 
 `logo.enabled` — JPEG → HiSi `logo.img` (иначе Cyta splash).
 

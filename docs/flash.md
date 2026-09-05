@@ -62,7 +62,7 @@ sudo ./eMMC153-Worker batch \
 Образ: `e2d-android-chroot.img` — [linux-install.md](linux-install.md).  
 После boot init монтирует e2d, отдаёт **SSH :22 root** и пытается запустить **Enigma2**.
 
-Отключить: `setprop persist.cytatv.sdlinux 0`.
+Отключить: `setprop persist.q22e.sdlinux 0`.
 
 ## Чеклист после прошивки
 

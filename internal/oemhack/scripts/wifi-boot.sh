@@ -3,7 +3,7 @@ T=/dev/ttyAMA0
 [ -c "$T" ] || T=/dev/console
 log() { echo "wifi-boot: $*" >>"$T" 2>/dev/null; }
 
-case "$(getprop persist.cytatv.wifi.enable)" in
+case "$(getprop persist.q22e.wifi.enable)" in
   0|false|no) exit 0 ;;
 esac
 
@@ -32,5 +32,10 @@ fi
     log "wlan0 up"
   else
     log "wlan0 missing — driver not loaded (enable WiFi in Settings?)"
+  fi
+  # Settings WifiSeedReceiver: дефолтная сеть из /system/etc/wifi/cytatv_default.conf
+  if [ -f /system/etc/wifi/cytatv_default.conf ]; then
+    am broadcast -a com.q22e.settings.SEED_WIFI -n com.android.settings/com.q22e.settings.WifiSeedReceiver >/dev/null 2>&1
+    log "SEED_WIFI broadcast"
   fi
 ) &

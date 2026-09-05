@@ -38,7 +38,7 @@ func stageManifest(b *Job) error {
 		}
 	}
 	if ls, err := b.Ls("/xbin"); err == nil {
-		re := regexp.MustCompile(`magisk|su|cytasu|busybox|bash|dropbear|uart|cytatv|adbd`)
+		re := regexp.MustCompile(`magisk|su|q22esu|busybox|bash|dropbear|uart|cytatv|adbd`)
 		for _, tok := range tokenizeLs(ls) {
 			if re.MatchString(tok) {
 				b.logf("  /xbin/%s", tok)
@@ -73,20 +73,20 @@ func stageManifest(b *Job) error {
 	for _, a := range b.Cfg.InstallApps {
 		installIDs = append(installIDs, a.APK)
 	}
-	manifest := fmt.Sprintf(`android-oem-hack: Cyta dump, IPTV removed, cytasu root, Magisk app, dropbear :22, SD Linux chroot
+	manifest := fmt.Sprintf(`android-oem-hack: OEM dump, IPTV removed, q22esu root, Magisk app, dropbear :22, SD Linux chroot
 logo   %d
 kernel %d
 system %d
 launcher: %s (preferred %s)
 system_apps: %s + services.jar compareSignatures mock
 install_apps: %s
-root: cytasu-daemon + /system/xbin/su (ADVCA — без Magisk boot-patch)
+root: q22esu-daemon + /system/xbin/su (ADVCA — без Magisk boot-patch)
 bash: /system/xbin/bash (Inknyto static ARM)
 ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e
 adb: tcp :5555 (/system/xbin/adbd + adbd-watch)
 uart: logcat I + crashes → ttyAMA0
-wifi: MT7662T cal+firmware; persist.cytatv.wifi.enable=1
-sd-linux: cytatv-sd-linux.sh — persist.cytatv.sdlinux=1; UI auto on USB
+wifi: MT7662T cal+firmware; persist.q22e.wifi.enable=1
+sd-linux: cytatv-sd-linux.sh — persist.q22e.sdlinux=1; UI auto on USB
 rebuild: go run ./cmd/q22e android-oem-hack build
 `, logoSz, kernSz, sysSz,
 		b.Cfg.Launcher.DefaultLauncher, b.Cfg.Launcher.PreferredPkg,

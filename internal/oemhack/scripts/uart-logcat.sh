@@ -1,7 +1,7 @@
 #!/system/bin/sh
 T=/dev/ttyAMA0
 [ -c "$T" ] || T=/dev/console
-LEVEL=$(getprop persist.cytatv.uart.loglevel)
+LEVEL=$(getprop persist.q22e.uart.loglevel)
 [ -z "$LEVEL" ] && LEVEL=I
 {
   echo ""

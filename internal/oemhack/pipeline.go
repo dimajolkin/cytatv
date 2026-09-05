@@ -21,6 +21,7 @@ func DefaultStages() []Stage {
 		{"patchPropsAndScripts", stagePatchPropsAndScripts},
 		{"writeInitAndHooks", stageWriteInitAndHooks},
 		{"wifiCalFirmware", stageWifiCalFirmware},
+		{"wifiDefault", stageWifiDefault},
 		{"installApps", stageInstallApps},
 		{"installRootTools", stageInstallRootTools},
 		{"e2fsck", stageE2fsck},

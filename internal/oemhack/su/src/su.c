@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#define SOCK_PATH "/dev/cytasu.sock"
+#define SOCK_PATH "/dev/q22esu.sock"
 #define MAX_CMD 12288
 
 static int talk(const char *cmd) {

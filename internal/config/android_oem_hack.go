@@ -36,6 +36,7 @@ type AndroidOemHack struct {
 	ReserveApps   []string         `yaml:"reserve_apps"`
 	Assets        []AssetSpec      `yaml:"assets"`
 	Flash         Flash            `yaml:"flash"`
+	Wifi          Wifi             `yaml:"wifi"`
 }
 
 func loadAndroidOemHack(path string) (AndroidOemHack, error) {

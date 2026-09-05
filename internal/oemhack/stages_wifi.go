@@ -73,3 +73,40 @@ func stageWifiCalFirmware(b *Job) error {
 	}
 	return nil
 }
+
+// stageWifiDefault пишет /system/etc/wifi/cytatv_default.conf для Settings seed.
+func stageWifiDefault(b *Job) error {
+	w := b.Cfg.Wifi
+	if strings.TrimSpace(w.SSID) == "" {
+		b.logf("wifi default: skip (нет wifi.ssid)")
+		b.Rm("/etc/wifi/cytatv_default.conf")
+		return nil
+	}
+	keyMgmt := strings.TrimSpace(w.KeyMgmt)
+	if keyMgmt == "" {
+		if strings.TrimSpace(w.PSK) == "" {
+			keyMgmt = "NONE"
+		} else {
+			keyMgmt = "WPA-PSK"
+		}
+	}
+	body := "ssid=" + escapeConfValue(w.SSID) + "\n" +
+		"psk=" + escapeConfValue(w.PSK) + "\n" +
+		"key_mgmt=" + escapeConfValue(keyMgmt) + "\n"
+	host := b.work("cytatv_default.conf")
+	if err := os.WriteFile(host, []byte(body), 0o600); err != nil {
+		return err
+	}
+	b.Mkdir("/etc/wifi")
+	if err := b.WriteBack(host, "/etc/wifi/cytatv_default.conf", "0100600"); err != nil {
+		return err
+	}
+	b.logf("wifi default: ssid=%q → /etc/wifi/cytatv_default.conf", w.SSID)
+	return nil
+}
+
+func escapeConfValue(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	return s
+}

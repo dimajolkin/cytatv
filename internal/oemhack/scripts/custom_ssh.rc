@@ -9,8 +9,8 @@ service dropbear /system/xbin/dropbear.sh
     group root
     disabled
 
-on property:persist.cytatv.ssh=1
+on property:persist.q22e.ssh=1
     start dropbear
 
-on property:persist.cytatv.ssh=0
+on property:persist.q22e.ssh=0
     stop dropbear

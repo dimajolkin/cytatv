@@ -1,12 +1,12 @@
 #!/system/bin/sh
 # Mount Ubuntu/Debian rootfs (SD/USB) → chroot: SSH :22.
-# UI handoff: auto on USB flash; on SD only if persist.cytatv.sdlinux.ui=1.
+# UI handoff: auto on USB flash; on SD only if persist.q22e.sdlinux.ui=1.
 T=/dev/ttyAMA0
 [ -c "$T" ] || T=/dev/console
 log() { echo "cytatv: sd-linux $*" >>"$T" 2>/dev/null; }
 
-case "$(getprop persist.cytatv.sdlinux)" in
-  0|false|no) log "skip (persist.cytatv.sdlinux=0)"; exit 0 ;;
+case "$(getprop persist.q22e.sdlinux)" in
+  0|false|no) log "skip (persist.q22e.sdlinux=0)"; exit 0 ;;
 esac
 
 MNT=/mnt/linux
@@ -148,13 +148,13 @@ stop_android_ssh
 ) &
 
 # UI handoff: USB flash → auto; SD → only if prop set (or force-off with =0)
-UI="$(getprop persist.cytatv.sdlinux.ui)"
+UI="$(getprop persist.q22e.sdlinux.ui)"
 if [ "$KIND" = "usb" ]; then
   case "$UI" in
     0|false|no) ;;
     *)
       UI=1
-      setprop persist.cytatv.sdlinux.ui 1
+      setprop persist.q22e.sdlinux.ui 1
       log "ui auto-set (usb)"
       ;;
   esac
@@ -170,7 +170,7 @@ case "$UI" in
     ) &
     ;;
   *)
-    log "ui keep Android (usb flash → auto; or set persist.cytatv.sdlinux.ui=1)"
+    log "ui keep Android (usb flash → auto; or set persist.q22e.sdlinux.ui=1)"
     ;;
 esac
 

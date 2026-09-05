@@ -12,7 +12,7 @@ services_patch:
   work_dir: build/android-oem-hack/work/services
   api: 24
 
-# cytasu root (ADVCA) — часть android-oem-hack
+# q22esu root (ADVCA) — часть android-oem-hack
 su:
   enabled: true
   ndk: /Users/dimajolkin/Library/Android/sdk/ndk/28.2.13676358
@@ -91,7 +91,7 @@ assets:
   - path: Magisk.apk
     url: https://github.com/topjohnwu/Magisk/releases/download/v25.2/Magisk-v25.2.apk
 
-  - path: magisk-arm/cytasu-daemon
+  - path: magisk-arm/q22esu-daemon
     optional: true # собирается при su.enabled
   - path: magisk-arm/su
     optional: true

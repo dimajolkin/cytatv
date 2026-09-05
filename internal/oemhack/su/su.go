@@ -11,7 +11,7 @@ import (
 //go:embed src/daemon.c src/su.c
 var srcFS embed.FS
 
-// Config for NDK build of cytasu-daemon + su.
+// Config for NDK build of q22esu-daemon + su.
 type Config struct {
 	Enabled bool   `yaml:"enabled"`
 	NDK     string `yaml:"ndk"`
@@ -44,7 +44,7 @@ func (c Config) Validate() error {
 	return nil
 }
 
-// Build compiles cytasu-daemon + su (static ARM) into cfg.OutDir.
+// Build compiles q22esu-daemon + su (static ARM) into cfg.OutDir.
 func Build(cfg Config) error {
 	if err := cfg.Validate(); err != nil {
 		return err
@@ -81,10 +81,10 @@ func Build(cfg Config) error {
 		}
 	}
 
-	daemonOut := filepath.Join(cfg.OutDir, "cytasu-daemon")
+	daemonOut := filepath.Join(cfg.OutDir, "q22esu-daemon")
 	suOut := filepath.Join(cfg.OutDir, "su")
 
-	fmt.Println("=== cytasu-daemon (NDK static ARM) ===")
+	fmt.Println("=== q22esu-daemon (NDK static ARM) ===")
 	if err := run(clang, "-O2", "-static", "-o", daemonOut, filepath.Join(work, "daemon.c")); err != nil {
 		return err
 	}

@@ -32,6 +32,7 @@ func pipelineFromConfig(cfg config.Config) Config {
 		Launcher:            a.Launcher,
 		ReserveApps:         reserve,
 		Assets:              a.Assets,
+		Wifi:                a.Wifi,
 	}
 }
 

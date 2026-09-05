@@ -2,7 +2,7 @@
 # Эксперимент: чтение команд с UART RX (на Q22E железо может не принимать).
 T=/dev/ttyAMA0
 [ -c "$T" ] || exit 0
-case "$(getprop persist.cytatv.uart.shell)" in
+case "$(getprop persist.q22e.uart.shell)" in
   0|false|no) exit 0 ;;
 esac
 BB=/system/xbin/busybox
