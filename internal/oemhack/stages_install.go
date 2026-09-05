@@ -9,12 +9,11 @@ import (
 
 func stageInstallApps(b *Job) error {
 	mode644 := "0100644"
-	// старые лаунчеры (OpenLauncher / Lawnchair) — HOME теперь Settings
-	b.RmTree("/priv-app/OpenLauncher")
-	b.RmTree("/priv-app/Lawnchair")
-	b.Mkdir("/priv-app/Magisk")
-	if err := b.WriteBack(b.asset("Magisk.apk"), "/priv-app/Magisk/Magisk.apk", mode644); err != nil {
-		return err
+
+	for _, app := range b.Cfg.InstallApps {
+		if err := installAssetApp(b, app, mode644); err != nil {
+			return err
+		}
 	}
 
 	for _, app := range b.Cfg.SystemApps {
@@ -37,23 +36,28 @@ func stageInstallApps(b *Job) error {
 	b.Rm("/framework/oat/arm/services.odex")
 	b.Rm("/framework/oat/arm/services.vdex")
 	b.Rm("/framework/oat/arm/services.art")
-
-	extras := []struct{ name, guest string }{
-		{"TermOnePlus", "/app/TermOnePlus"},
-		{"WifiAnalyzer", "/app/WifiAnalyzer"},
-		{"Amaze", "/app/Amaze"},
-		{"Game2048", "/app/Game2048"},
-		{"Lightning", "/app/Lightning"},
-		{"WifiHub", "/app/WifiHub"},
-	}
-	for _, e := range extras {
-		b.Mkdir(e.guest)
-		apk := b.asset("extras", e.name+".apk")
-		if err := b.WriteBack(apk, e.guest+"/"+e.name+".apk", mode644); err != nil {
-			return err
-		}
-	}
 	return nil
+}
+
+func installAssetApp(b *Job, app config.InstallAppSpec, mode string) error {
+	host := b.asset(app.APK)
+	if _, err := os.Stat(host); err != nil {
+		if app.Optional {
+			b.logf("skip optional install %s: %v", app.APK, err)
+			return nil
+		}
+		return fmt.Errorf("install_apps %s: %w", app.APK, err)
+	}
+	b.logf("install %s → %s", app.APK, app.Guest)
+	for _, p := range app.Replace {
+		b.RmTree(p)
+		b.Rm(p)
+	}
+	guestDir := filepath.ToSlash(filepath.Dir(app.Guest))
+	b.Rm(app.Guest)
+	b.Rmdir(guestDir)
+	b.Mkdir(guestDir)
+	return b.WriteBack(host, app.Guest, mode)
 }
 
 func installSystemApp(b *Job, app config.SystemAppSpec, mode string) error {

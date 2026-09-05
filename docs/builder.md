@@ -6,6 +6,7 @@ go run ./cmd/q22e ubuntu build
 go run ./cmd/q22e ubuntu flash -d diskN --force
 go run ./cmd/q22e settings
 go run ./cmd/q22e android-oem-hack build
+go run ./cmd/q22e android-oem-hack test   # system.img ↔ yaml (debugfs)
 go run ./cmd/q22e android-oem-hack flash -d diskN --force
 go run ./cmd/q22e list
 go run ./cmd/q22e uart
@@ -31,7 +32,17 @@ system_apps:
     make_target: apk-for-firmware
 ```
 
-`assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`). Все пути — только из yaml.
+`assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`).
+
+`install_apps[]` — APK из assets → путь в `system.img` (`guest`, опционально `replace`, `optional`).
+
+`launcher` — `preferred_pkg` / `default_launcher` → build.prop / build_hw.prop.
+
+`reserve_apps[]` — пакеты для `/etc/reserveAPP.xml`.
+
+Имена пакетов и список APK — только в yaml; Go их не хардкодит.
+
+После `build`: `go run ./cmd/q22e android-oem-hack test` — guest paths, launcher props, reserve_apps, replace.
 
 `services_patch` — Docker baksmali/smali для `services.jar` (мок compareSignatures).
 

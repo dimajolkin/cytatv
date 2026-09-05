@@ -15,6 +15,20 @@ type SystemAppSpec struct {
 	MakeTarget  string `yaml:"make_target"`
 }
 
+// InstallAppSpec — APK из assets → путь в system.img (без сборки).
+type InstallAppSpec struct {
+	APK      string   `yaml:"apk"`
+	Guest    string   `yaml:"guest"`
+	Replace  []string `yaml:"replace"`  // деревья/пути, удалить перед записью
+	Optional bool     `yaml:"optional"` // нет файла в assets — пропуск
+}
+
+// LauncherSpec — props HOME / preferred (значения только из yaml).
+type LauncherSpec struct {
+	PreferredPkg    string `yaml:"preferred_pkg"`
+	DefaultLauncher string `yaml:"default_launcher"`
+}
+
 // AssetSpec — файл для pipeline (download / extract / seed).
 type AssetSpec struct {
 	Path       string       `yaml:"path"`

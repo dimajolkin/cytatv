@@ -64,7 +64,7 @@ func stagePatchPropsAndScripts(b *Job) error {
 		"ro.total.flash":                "8G",
 		"ro.build.type":                 "userdebug",
 		"ro.build.tags":                 "test-keys",
-		"ro.oem_preferred_pkg":          "com.android.settings",
+		"ro.oem_preferred_pkg":          b.Cfg.Launcher.PreferredPkg,
 	} {
 		bp = setProp(bp, k, v)
 	}
@@ -86,7 +86,7 @@ func stagePatchPropsAndScripts(b *Job) error {
 		hw = delProp(hw, "ro.product.stb.vmxTaVersion")
 		for k, v := range map[string]string{
 			"ro.hw.sys.net.add.iptvroute": "0",
-			"ro.hw.sys.default.launcher":  "com.android.settings",
+			"ro.hw.sys.default.launcher":  b.Cfg.Launcher.DefaultLauncher,
 			"ro.hw.sys.boot.haswizard":    "0",
 			"ro.hw.sys.net.dhcp.opt60":    "0",
 			"ro.hw.sys.net.dhcp.opt61":    "0",
@@ -100,14 +100,25 @@ func stagePatchPropsAndScripts(b *Job) error {
 		b.logf("build_hw.prop OK")
 	}
 
-	// overwrite reserveAPP from embed
-	res, err := scriptFS.ReadFile("scripts/reserveAPP.xml")
-	if err != nil {
+	if err := os.WriteFile(b.work("reserveAPP.xml"), []byte(renderReserveAPP(b.Cfg.ReserveApps)), 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(b.work("reserveAPP.xml"), res, 0o644); err != nil {
-		return err
-	}
-	b.logf("reserveAPP.xml OK")
+	b.logf("reserveAPP.xml OK (%d apps)", len(b.Cfg.ReserveApps))
 	return nil
+}
+
+func renderReserveAPP(pkgs []string) string {
+	var b strings.Builder
+	b.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Application>\n")
+	for _, p := range pkgs {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		b.WriteString("  <app packageName=\"")
+		b.WriteString(p)
+		b.WriteString("\"><persist>true</persist></app>\n")
+	}
+	b.WriteString("</Application>\n")
+	return b.String()
 }

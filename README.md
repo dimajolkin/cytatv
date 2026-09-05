@@ -10,7 +10,7 @@ TV-приставка **Cyta** (Huawei Q22E-E1301, Hi3798CV200) — дамп, cu
 | UART | ✅ boot log @ 115200, **только чтение** |
 | Прошивка | ✅ **ISP eMMC** ([docs/flash.md](docs/flash.md)) |
 | Backup | ✅ `build/original/` (`q22e init`) |
-| Custom Android | Settings=HOME, cytasu, Magisk, SSH, ADB tcp → `android-oem-hack` |
+| Custom Android | OpenLauncher HOME, cytasu, Magisk, SSH, ADB tcp → `android-oem-hack` |
 | Linux | Ubuntu Base armhf chroot — [ubuntu-chroot.md](docs/ubuntu-chroot.md) |
 
 MENU / `.upk` / синяя кнопка на этой Cyta **недоступны** (ADVCA).

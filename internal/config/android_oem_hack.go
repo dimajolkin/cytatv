@@ -28,9 +28,12 @@ type AndroidOemHack struct {
 	ServicesPatch ServicesPatch   `yaml:"services_patch"`
 	Su            su.Config       `yaml:"su"`
 	Logo          logo.Config     `yaml:"logo"`
-	SystemApps    []SystemAppSpec `yaml:"system_apps"`
-	Assets        []AssetSpec     `yaml:"assets"`
-	Flash         Flash           `yaml:"flash"`
+	SystemApps    []SystemAppSpec  `yaml:"system_apps"`
+	InstallApps   []InstallAppSpec `yaml:"install_apps"`
+	Launcher      LauncherSpec     `yaml:"launcher"`
+	ReserveApps   []string         `yaml:"reserve_apps"`
+	Assets        []AssetSpec      `yaml:"assets"`
+	Flash         Flash            `yaml:"flash"`
 }
 
 func loadAndroidOemHack(path string) (AndroidOemHack, error) {
@@ -85,6 +88,17 @@ func (c AndroidOemHack) Validate() error {
 				return fmt.Errorf("android_oem_hack.system_apps[%s]: ref, src_dir, make_target обязательны при repo", app.ID)
 			}
 		}
+	}
+	for i, app := range c.InstallApps {
+		if app.APK == "" || app.Guest == "" {
+			return fmt.Errorf("android_oem_hack.install_apps[%d]: apk и guest обязательны", i)
+		}
+	}
+	if c.Launcher.PreferredPkg == "" || c.Launcher.DefaultLauncher == "" {
+		return errRequired("android_oem_hack.launcher.preferred_pkg / default_launcher")
+	}
+	if len(c.ReserveApps) == 0 {
+		return errRequired("android_oem_hack.reserve_apps[]")
 	}
 	return nil
 }

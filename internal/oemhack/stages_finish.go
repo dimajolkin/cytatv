@@ -24,12 +24,15 @@ func stageManifest(b *Job) error {
 			b.logf("  %s", line)
 		}
 	}
-	for _, p := range []string{
-		"/priv-app/Magisk", "/priv-app/Settings",
-		"/app/TermOnePlus", "/app/WifiAnalyzer", "/app/Amaze",
-		"/app/Game2048", "/app/Lightning", "/app/WifiHub",
-		"/etc/dropbear",
-	} {
+	var guests []string
+	for _, a := range b.Cfg.InstallApps {
+		guests = append(guests, filepath.ToSlash(filepath.Dir(a.Guest)))
+	}
+	for _, a := range b.Cfg.SystemApps {
+		guests = append(guests, filepath.ToSlash(filepath.Dir(a.Guest)))
+	}
+	guests = append(guests, "/etc/dropbear")
+	for _, p := range guests {
 		if ls, err := b.Ls(p); err == nil {
 			b.logf("%s: %s", p, strings.TrimSpace(collapseWS(ls)))
 		}
@@ -66,13 +69,17 @@ func stageManifest(b *Job) error {
 	for _, a := range b.Cfg.SystemApps {
 		appIDs = append(appIDs, fmt.Sprintf("%s(uid=%d)", a.ID, a.UID))
 	}
-	manifest := fmt.Sprintf(`android-oem-hack: Cyta dump, IPTV removed, Settings HOME, cytasu root, Magisk app, dropbear :22, SD Linux chroot
+	var installIDs []string
+	for _, a := range b.Cfg.InstallApps {
+		installIDs = append(installIDs, a.APK)
+	}
+	manifest := fmt.Sprintf(`android-oem-hack: Cyta dump, IPTV removed, cytasu root, Magisk app, dropbear :22, SD Linux chroot
 logo   %d
 kernel %d
 system %d
-launcher: com.android.settings (Q22E Settings = HOME)
+launcher: %s (preferred %s)
 system_apps: %s + services.jar compareSignatures mock
-apps: TermOnePlus, WifiAnalyzer, Amaze, 2048, Lightning, WifiHub (Wi‑Fi)
+install_apps: %s
 root: cytasu-daemon + /system/xbin/su (ADVCA — без Magisk boot-patch)
 bash: /system/xbin/bash (Inknyto static ARM)
 ssh: dropbear :22 — ключ assets/ssh/id_ed25519_q22e
@@ -81,7 +88,9 @@ uart: logcat I + crashes → ttyAMA0
 wifi: MT7662T cal+firmware; persist.cytatv.wifi.enable=1
 sd-linux: cytatv-sd-linux.sh — persist.cytatv.sdlinux=1; UI auto on USB
 rebuild: go run ./cmd/q22e android-oem-hack build
-`, logoSz, kernSz, sysSz, strings.Join(appIDs, ", "))
+`, logoSz, kernSz, sysSz,
+		b.Cfg.Launcher.DefaultLauncher, b.Cfg.Launcher.PreferredPkg,
+		strings.Join(appIDs, ", "), strings.Join(installIDs, ", "))
 	return os.WriteFile(filepath.Join(b.Cfg.OutDir, "MANIFEST.txt"), []byte(manifest), 0o644)
 }
 

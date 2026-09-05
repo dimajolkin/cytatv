@@ -27,6 +27,9 @@ type Config struct {
 	InstallSu           bool // cytasu-daemon + su into system.img
 	InstallLogo         bool // HiSi splash (logo-neutral.img) вместо Cyta
 	SystemApps          []config.SystemAppSpec
+	InstallApps         []config.InstallAppSpec
+	Launcher            config.LauncherSpec
+	ReserveApps         []string
 	Assets              []config.AssetSpec
 }
 
@@ -157,9 +160,18 @@ func (b *Job) Mkdir(guest string) {
 	_ = b.debugfsCmd(true, "mkdir "+guest)
 }
 
-// Stat checks guest path exists.
+// Stat checks guest path exists (debugfs always exits 0 — смотрим вывод).
 func (b *Job) Stat(guest string) bool {
-	return b.debugfsCmd(false, "stat "+guest) == nil
+	cmd := exec.Command(b.Cfg.Debugfs, "-R", "stat "+guest, b.Img)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return false
+	}
+	s := string(out)
+	if strings.Contains(s, "File not found") || strings.Contains(s, "ext2_lookup") {
+		return false
+	}
+	return strings.Contains(s, "Inode:")
 }
 
 // WriteBack writes host file into guest path; mode like "0100644" optional.

@@ -12,6 +12,8 @@ import (
 func pipelineFromConfig(cfg config.Config) Config {
 	a := cfg.AndroidOemHack
 	apps := append([]config.SystemAppSpec(nil), a.SystemApps...)
+	install := append([]config.InstallAppSpec(nil), a.InstallApps...)
+	reserve := append([]string(nil), a.ReserveApps...)
 	return Config{
 		Root:                cfg.Root,
 		OutDir:              a.OutputDir,
@@ -27,6 +29,9 @@ func pipelineFromConfig(cfg config.Config) Config {
 		InstallSu:           a.Su.Enabled,
 		InstallLogo:         a.Logo.Enabled,
 		SystemApps:          apps,
+		InstallApps:         install,
+		Launcher:            a.Launcher,
+		ReserveApps:         reserve,
 		Assets:              a.Assets,
 	}
 }

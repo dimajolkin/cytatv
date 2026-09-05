@@ -24,7 +24,6 @@ func TestFetchAssetsFromURLs(t *testing.T) {
 	pipe := pipelineFromConfig(cfg)
 	pipe.AssetsDir = dir
 	pipe.SeedDir = filepath.Join(root, "assets")
-	// skip su/logo outputs requirement for this test
 	b, err := NewJob(pipe)
 	if err != nil {
 		t.Fatal(err)
@@ -35,23 +34,12 @@ func TestFetchAssetsFromURLs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, p := range []string{
-		"Magisk.apk",
-		"magisk-arm/magisk",
-		"magisk-arm/magiskpolicy",
-		"magisk-arm/busybox",
-		"dropbear-arm/dropbear",
-		"dropbear-arm/dropbearkey",
-		"dropbear-arm/scp",
-		"ssh/authorized_keys",
-		"extras/TermOnePlus.apk",
-		"extras/Lightning.apk",
-		"bash-arm/bash",
-		"adbd-arm/adbd",
-		"logo/neutral.jpg",
-	} {
-		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(p))); err != nil {
-			t.Errorf("missing %s: %v", p, err)
+	for _, a := range cfg.AndroidOemHack.Assets {
+		if a.Optional {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(a.Path))); err != nil {
+			t.Errorf("missing %s: %v", a.Path, err)
 		}
 	}
 }

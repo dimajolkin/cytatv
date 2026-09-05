@@ -47,9 +47,52 @@ system_apps:
     src_dir: build/android-oem-hack/src/q22e-android-settings
     make_target: apk-for-firmware
 
+# HOME / preferred — только yaml (Go не знает имён пакетов)
+launcher:
+  preferred_pkg: com.benny.openlauncher
+  default_launcher: com.benny.openlauncher
+
+reserve_apps:
+  - system
+  - system_server
+  - com.android.systemui
+  - com.android.settings
+  - com.benny.openlauncher
+  - com.android.bluetooth
+  - com.hisilicon.android.hiRMService
+  - com.huawei.hmt.hmtNetworkService
+  - com.huawei.hmt.stbbgservice
+  - com.huawei.toast
+  - com.topjohnwu.magisk
+
+# APK из assets → system.img
+install_apps:
+  - apk: OpenLauncher.apk
+    guest: /priv-app/OpenLauncher/OpenLauncher.apk
+    replace:
+      - /priv-app/Lawnchair
+      - /priv-app/OpenLauncher
+  - apk: Magisk.apk
+    guest: /priv-app/Magisk/Magisk.apk
+  - apk: extras/TermOnePlus.apk
+    guest: /app/TermOnePlus/TermOnePlus.apk
+  - apk: extras/WifiAnalyzer.apk
+    guest: /app/WifiAnalyzer/WifiAnalyzer.apk
+  - apk: extras/Amaze.apk
+    guest: /app/Amaze/Amaze.apk
+  - apk: extras/Game2048.apk
+    guest: /app/Game2048/Game2048.apk
+  - apk: extras/Lightning.apk
+    guest: /app/Lightning/Lightning.apk
+  - apk: extras/WifiHub.apk
+    guest: /app/WifiHub/WifiHub.apk
+    optional: true
+
 # Файлы для pipeline: скачивание в assets_dir, затем install*
 # path — относительно assets_dir; from — архив уже в assets_dir
 assets:
+  - path: OpenLauncher.apk # seed: assets/OpenLauncher.apk (0.7.4, com.benny.openlauncher)
+
   - path: Magisk.apk
     url: https://github.com/topjohnwu/Magisk/releases/download/v25.2/Magisk-v25.2.apk
 

@@ -155,7 +155,7 @@ func androidOemHackCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:     "android-oem-hack",
 		Aliases: []string{"aoh"},
-		Short:   "OEM Android: build | flash (ISP eMMC)",
+		Short:   "OEM Android: build | test | flash (ISP eMMC)",
 	}
 	c.AddCommand(
 		&cobra.Command{
@@ -163,6 +163,12 @@ func androidOemHackCmd() *cobra.Command {
 			Aliases: []string{"b"},
 			Short:   "Патч system → build/android-oem-hack/",
 			RunE:    withConfig(oemhack.Build),
+		},
+		&cobra.Command{
+			Use:     "test",
+			Aliases: []string{"t"},
+			Short:   "Проверить system.img против yaml (debugfs)",
+			RunE:    withConfig(oemhack.Test),
 		},
 		aohFlashCmd(),
 	)
