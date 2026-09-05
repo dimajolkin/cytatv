@@ -24,3 +24,6 @@ docs/boot-log-*.txt
 .idea/
 **/__pycache__/
 *.pyc
+
+# локальные оверлеи конфигов (секреты / machine-specific)
+/configs/*.local.yaml

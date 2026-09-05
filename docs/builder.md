@@ -11,7 +11,8 @@ go run ./cmd/q22e list
 go run ./cmd/q22e uart
 ```
 
-Конфиг: `internal/config` ← `configs/ubuntu.yaml`, `configs/android-oem-hack.yaml`, `configs/uart.yaml` (без ENV).
+Конфиг: `internal/config` ← `configs/ubuntu.yaml`, `configs/android-oem-hack.yaml`
+(+ опциональный `configs/android-oem-hack.local.yaml`, gitignore), `configs/uart.yaml`.
 
 
 ## android-oem-hack — system_apps

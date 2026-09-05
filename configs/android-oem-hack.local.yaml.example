@@ -1,0 +1,8 @@
+# Локальный оверлей для android-oem-hack.yaml (gitignore).
+# Скопируй в android-oem-hack.local.yaml и правь.
+# Maps мержатся рекурсивно; списки (assets[], …) при указании — целиком заменяются.
+
+flash:
+  disk: disk4
+  force: true
+  verify: true
