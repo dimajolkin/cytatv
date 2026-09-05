@@ -1,10 +1,13 @@
 # Доработка Settings
 
-Проект: **[q22e-android](../../q22e-android/)** → `settings-ui/`.
+Проект: **[q22e-android-settings](../../q22e-android-settings/)** → `settings-ui/`.
 
-Путь: расширять стоковый Settings (smali/apktool), не подменять урезанным UI.
-Временный Kotlin UI в `settings-ui` — прототип экранов ADB/SSH.
+Править и коммитить только там. cytatv берёт исходники через
+`configs/android-oem-hack.yaml` → `system_apps[settings].src_dir: ../q22e-android-settings`.
 
 ```bash
-cd ~/Project/Github/cytatv && go run ./cmd/q22e settings && go run ./cmd/q22e android-oem-hack build
+# правки в q22e-android-settings, затем:
+cd ~/Project/Github/cytatv
+go run ./cmd/q22e settings
+go run ./cmd/q22e android-oem-hack build
 ```

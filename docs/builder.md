@@ -28,9 +28,12 @@ system_apps:
     remove_stock: /app/Settings
     repo: git@github.com:dimajolkin/q22e-android-settings.git
     ref: main
-    src_dir: build/android-oem-hack/src/q22e-android-settings
+    src_dir: ../q22e-android-settings
     make_target: apk-for-firmware
 ```
+
+Рабочий код Settings: репозиторий **q22e-android-settings** (sibling к cytatv).
+`go run ./cmd/q22e settings` собирает APK из `src_dir`.
 
 `assets[]` — файлы в `assets_dir` (`url` / `from`+`extract` / опциональный `seed_dir`).
 

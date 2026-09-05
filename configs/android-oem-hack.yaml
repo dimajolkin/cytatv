@@ -33,7 +33,8 @@ flash:
   build: false
   wipe_userdata: true
 
-# Приложения системного пользователя (uid=1000). Пока один вариант — из git repo.
+# Приложения системного пользователя (uid=1000).
+# Settings: править в ../q22e-android-settings (не в build/.../src).
 system_apps:
   - id: settings
     uid: 1000
@@ -41,10 +42,12 @@ system_apps:
     guest: /priv-app/Settings/Settings.apk
     remove_stock: /app/Settings
     skip_build: false
+    # Локальный checkout рядом с cytatv — источник правды при разработке.
+    # pull: true только если нужен свежий origin/main без локальных правок.
     pull: false
     repo: git@github.com:dimajolkin/q22e-android-settings.git
     ref: main
-    src_dir: build/android-oem-hack/src/q22e-android-settings
+    src_dir: ../q22e-android-settings
     make_target: apk-for-firmware
 
 # HOME / preferred — только yaml (Go не знает имён пакетов)
