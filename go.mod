@@ -5,7 +5,9 @@ go 1.22.0
 require (
 	github.com/dimajolkin/eMMC153-Writer v0.0.0
 	github.com/spf13/cobra v1.9.1
+	github.com/yaml/go-yaml-dom v0.1.2
 	go.bug.st/serial v1.6.2
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 

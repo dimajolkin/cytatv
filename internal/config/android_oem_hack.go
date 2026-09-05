@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	dom "github.com/yaml/go-yaml-dom"
+	yaml "go.yaml.in/yaml/v4"
 
 	"cytatv/internal/oemhack/logo"
 	"cytatv/internal/oemhack/su"
@@ -42,74 +43,43 @@ func loadAndroidOemHack(path string) (AndroidOemHack, error) {
 	if err != nil {
 		return AndroidOemHack{}, err
 	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return AndroidOemHack{}, fmt.Errorf("%s: %w", path, err)
+	}
 	localPath := filepath.Join(filepath.Dir(path), "android-oem-hack.local.yaml")
 	if lb, err := os.ReadFile(localPath); err == nil {
-		merged, err := mergeYAMLDocs(b, lb)
-		if err != nil {
+		var overlay yaml.Node
+		if err := yaml.Unmarshal(lb, &overlay); err != nil {
 			return AndroidOemHack{}, fmt.Errorf("%s: %w", localPath, err)
 		}
-		b = merged
+		// Maps deep-merge; sequences replace (dom default).
+		if err := dom.Merge(&doc, &overlay); err != nil {
+			return AndroidOemHack{}, fmt.Errorf("%s: merge: %w", localPath, err)
+		}
 	} else if !os.IsNotExist(err) {
 		return AndroidOemHack{}, fmt.Errorf("%s: %w", localPath, err)
 	}
 	var c AndroidOemHack
-	if err := yaml.Unmarshal(b, &c); err != nil {
+	if err := doc.Decode(&c); err != nil {
 		return AndroidOemHack{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return c, nil
 }
 
-// mergeYAMLDocs deep-merges overlay onto base.
-// Maps merge recursively; scalars and sequences from overlay replace.
+// mergeYAMLDocs deep-merges overlay onto base via go-yaml-dom.
 func mergeYAMLDocs(base, overlay []byte) ([]byte, error) {
-	var bMap, oMap map[string]any
-	if err := yaml.Unmarshal(base, &bMap); err != nil {
+	var dst, src yaml.Node
+	if err := yaml.Unmarshal(base, &dst); err != nil {
 		return nil, fmt.Errorf("base: %w", err)
 	}
-	if err := yaml.Unmarshal(overlay, &oMap); err != nil {
+	if err := yaml.Unmarshal(overlay, &src); err != nil {
 		return nil, fmt.Errorf("overlay: %w", err)
 	}
-	if bMap == nil {
-		bMap = map[string]any{}
-	}
-	merged := deepMergeMaps(bMap, oMap)
-	out, err := yaml.Marshal(merged)
-	if err != nil {
+	if err := dom.Merge(&dst, &src); err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func deepMergeMaps(dst, src map[string]any) map[string]any {
-	for k, v := range src {
-		if vMap, ok := asStringMap(v); ok {
-			if dMap, ok := asStringMap(dst[k]); ok {
-				dst[k] = deepMergeMaps(dMap, vMap)
-				continue
-			}
-		}
-		dst[k] = v
-	}
-	return dst
-}
-
-func asStringMap(v any) (map[string]any, bool) {
-	switch m := v.(type) {
-	case map[string]any:
-		return m, true
-	case map[any]any:
-		out := make(map[string]any, len(m))
-		for k, val := range m {
-			ks, ok := k.(string)
-			if !ok {
-				return nil, false
-			}
-			out[ks] = val
-		}
-		return out, true
-	default:
-		return nil, false
-	}
+	return yaml.Marshal(&dst)
 }
 
 func (c AndroidOemHack) Validate() error {
